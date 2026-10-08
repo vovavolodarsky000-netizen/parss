@@ -437,6 +437,43 @@ docker run -p 80:80 tg-parser
 
 О: Да, замените localStorage на API вызовы к вашему бэкенду с базой данных (PostgreSQL, MongoDB и т.д.).
 
+## 🖥 Бэкенд (Production Ready)
+
+Полноценный бэкенд реализован в папке `backend/` и включает:
+
+### Технологии бэкенда
+- **Node.js** + **TypeScript** + **Express.js**
+- **PostgreSQL** + **Prisma ORM** — надёжное серверное хранилище
+- **JWT** — аутентификация с refresh токенами
+- **gram.js** — реальная интеграция с Telegram API
+- **Winston** — профессиональное логирование
+- **Helmet** + **CORS** + **Rate Limiting** — безопасность
+- **Zod** — валидация входных данных
+
+### Возможности бэкенда
+- ✅ Регистрация и авторизация пользователей (JWT)
+- ✅ Реальный парсинг Telegram каналов через API
+- ✅ Парсинг веб-сайтов с CSS-селекторами
+- ✅ Серверное хранилище данных (PostgreSQL)
+- ✅ Обработка ошибок и логирование
+- ✅ CORS и безопасность (Helmet, Rate Limiting)
+- ✅ Аудит действий пользователей
+- ✅ Очереди задач для парсинга
+
+### Быстрый старт бэкенда
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+# Настройте .env (PostgreSQL, JWT, Telegram API)
+npm run prisma:generate
+npm run prisma:migrate
+npm run dev
+```
+
+Подробная документация: [`backend/README.md`](./backend/README.md)
+
 ## 📝 Лицензия
 
 MIT
@@ -451,9 +488,7 @@ Pull requests приветствуются! Для крупных изменен
 
 ---
 
-**Примечание:** Это демо-приложение для демонстрации возможностей. Для продакшен-использования необходимо:
-- Добавить бэкенд для работы с реальным Telegram API
-- Реализовать аутентификацию пользователей
-- Заменить localStorage на серверное хранилище
-- Добавить обработку ошибок и логирование
-- Настроить CORS и безопасность
+**Архитектура проекта:**
+- **Frontend** (`/`) — React + TypeScript + Tailwind (демо-режим с localStorage)
+- **Backend** (`/backend`) — Node.js + Express + PostgreSQL (production-ready)
+- **Интеграция** — API клиент в `src/api.ts` для связи фронтенда с бэкендом
