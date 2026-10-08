@@ -49,6 +49,7 @@ export interface Post {
   status: 'new' | 'approved' | 'published' | 'rejected';
   hashtags: string[];
   hasMedia: boolean;
+  source?: 'telegram' | 'web';
 }
 
 export interface ParserSettings {
@@ -75,4 +76,47 @@ export interface DashboardStats {
   postsToday: number;
 }
 
-export type TabType = 'dashboard' | 'channels' | 'posts' | 'settings' | 'publish';
+export interface WebSite {
+  id: string;
+  name: string;
+  url: string;
+  isActive: boolean;
+  lastParsed: string | null;
+  topics: string[];
+  keywords: string[];
+  parseRules: ParseRule[];
+  addedAt: string;
+}
+
+export interface ParseRule {
+  id: string;
+  name: string;
+  urlPattern: string; // URL pattern or regex
+  titleSelector: string; // CSS selector for title
+  contentSelector: string; // CSS selector for content
+  dateSelector?: string; // CSS selector for date
+  imageSelector?: string; // CSS selector for image
+  authorSelector?: string; // CSS selector for author
+  linkSelector?: string; // CSS selector for link
+  maxItems: number;
+  isActive: boolean;
+}
+
+export interface WebPost {
+  id: string;
+  siteId: string;
+  siteName: string;
+  siteUrl: string;
+  title: string;
+  content: string;
+  url: string;
+  imageUrl?: string;
+  author?: string;
+  date: string;
+  parsedAt: string;
+  status: 'new' | 'approved' | 'published' | 'rejected';
+  topics: string[];
+  keywords: string[];
+}
+
+export type TabType = 'dashboard' | 'channels' | 'posts' | 'sites' | 'settings' | 'publish';

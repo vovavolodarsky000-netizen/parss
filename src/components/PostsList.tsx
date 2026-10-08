@@ -195,6 +195,16 @@ export default function PostsList({ posts, channels: allChannels = [], onUpdateS
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="text-sm font-semibold text-gray-900">{post.channelTitle}</span>
+                      {post.source === 'web' && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium">
+                          <i className="fas fa-globe mr-0.5"></i>Web
+                        </span>
+                      )}
+                      {post.source === 'telegram' && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-sky-50 text-sky-600 font-medium">
+                          <i className="fab fa-telegram mr-0.5"></i>TG
+                        </span>
+                      )}
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         post.status === 'new' ? 'bg-blue-100 text-blue-700' :
                         post.status === 'approved' ? 'bg-green-100 text-green-700' :

@@ -1,20 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Channel, Post, ParserSettings, DashboardStats, TabType } from './types';
+import { Channel, Post, ParserSettings, DashboardStats, TabType, WebSite, WebPost } from './types';
 import {
   getChannels, getPosts, getSettings, saveSettings,
   addChannel, removeChannel, toggleChannel,
   updatePostStatus, bulkUpdateStatus, simulateParsing, resetData
 } from './store';
+import {
+  getWebSites, getWebPosts, addWebSite, removeWebSite, toggleWebSite, updateWebSite,
+  updateWebPostStatus as updateWebPostStatusAction, bulkUpdateWebPostStatus, simulateWebParsing
+} from './webStore';
 import Dashboard from './components/Dashboard';
 import ChannelsList from './components/ChannelsList';
 import PostsList from './components/PostsList';
 import Settings from './components/Settings';
 import PublishQueue from './components/PublishQueue';
+import SitesManager from './components/SitesManager';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [channels, setChannels] = useState<Channel[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [sites, setSites] = useState<WebSite[]>([]);
+  const [webPosts, setWebPosts] = useState<WebPost[]>([]);
   const [settings, setSettings] = useState<ParserSettings>(getSettings());
   const [isParsing, setIsParsing] = useState(false);
   const [parseResult, setParseResult] = useState<string | null>(null);
@@ -23,6 +30,8 @@ export default function App() {
   const loadData = useCallback(() => {
     setChannels(getChannels());
     setPosts(getPosts());
+    setSites(getWebSites());
+    setWebPosts(getWebPosts());
   }, []);
 
   useEffect(() => {
@@ -32,17 +41,33 @@ export default function App() {
   const stats: DashboardStats = {
     totalChannels: channels.length,
     activeChannels: channels.filter(ch => ch.isActive).length,
-    totalPosts: posts.length,
-    newPosts: posts.filter(p => p.status === 'new').length,
-    approvedPosts: posts.filter(p => p.status === 'approved').length,
-    publishedPosts: posts.filter(p => p.status === 'published').length,
-    lastParseTime: channels.reduce((latest, ch) => {
-      if (ch.lastParsed && (!latest || new Date(ch.lastParsed) > new Date(latest))) {
-        return ch.lastParsed;
+    totalPosts: posts.length + webPosts.length,
+    newPosts: posts.filter(p => p.status === 'new').length + webPosts.filter(p => p.status === 'new').length,
+    approvedPosts: posts.filter(p => p.status === 'approved').length + webPosts.filter(p => p.status === 'approved').length,
+    publishedPosts: posts.filter(p => p.status === 'published').length + webPosts.filter(p => p.status === 'published').length,
+    lastParseTime: (() => {
+      const channelLast = channels.reduce((latest, ch) => {
+        if (ch.lastParsed && (!latest || new Date(ch.lastParsed) > new Date(latest))) {
+          return ch.lastParsed;
+        }
+        return latest;
+      }, null as string | null);
+      const siteLast = sites.reduce((latest, s) => {
+        if (s.lastParsed && (!latest || new Date(s.lastParsed) > new Date(latest))) {
+          return s.lastParsed;
+        }
+        return latest;
+      }, null as string | null);
+      if (channelLast && siteLast) {
+        return new Date(channelLast) > new Date(siteLast) ? channelLast : siteLast;
       }
-      return latest;
-    }, null as string | null),
+      return channelLast || siteLast;
+    })(),
     postsToday: posts.filter(p => {
+      const today = new Date();
+      const postDate = new Date(p.date);
+      return postDate.toDateString() === today.toDateString();
+    }).length + webPosts.filter(p => {
       const today = new Date();
       const postDate = new Date(p.date);
       return postDate.toDateString() === today.toDateString();
@@ -56,10 +81,11 @@ export default function App() {
     // Simulate parsing delay
     setTimeout(() => {
       const newPosts = simulateParsing();
+      const newWebPosts = simulateWebParsing();
       loadData();
       setIsParsing(false);
-      setParseResult(`Собрано ${newPosts.length} новых постов`);
-      setTimeout(() => setParseResult(null), 3000);
+      setParseResult(`Собрано ${newPosts.length + newWebPosts.length} новых постов (${newPosts.length} из каналов, ${newWebPosts.length} с сайтов)`);
+      setTimeout(() => setParseResult(null), 5000);
     }, 2000);
   };
 
@@ -95,13 +121,46 @@ export default function App() {
 
   const handleReset = () => {
     resetData();
+    localStorage.removeItem('tg_parser_sites');
+    localStorage.removeItem('tg_parser_web_posts');
     loadData();
     setSettings(getSettings());
+  };
+
+  const handleAddSite = (site: Omit<WebSite, 'id' | 'addedAt'>) => {
+    addWebSite(site);
+    loadData();
+  };
+
+  const handleRemoveSite = (id: string) => {
+    removeWebSite(id);
+    loadData();
+  };
+
+  const handleToggleSite = (id: string) => {
+    toggleWebSite(id);
+    loadData();
+  };
+
+  const handleUpdateSite = (id: string, updates: Partial<WebSite>) => {
+    updateWebSite(id, updates);
+    loadData();
+  };
+
+  const handleUpdateWebPostStatus = (id: string, status: WebPost['status']) => {
+    updateWebPostStatusAction(id, status);
+    loadData();
+  };
+
+  const handleBulkUpdateWebPosts = (ids: string[], status: WebPost['status']) => {
+    bulkUpdateWebPostStatus(ids, status);
+    loadData();
   };
 
   const tabs: { key: TabType; label: string; icon: string }[] = [
     { key: 'dashboard', label: 'Дашборд', icon: 'fa-chart-line' },
     { key: 'channels', label: 'Каналы', icon: 'fa-broadcast-tower' },
+    { key: 'sites', label: 'Веб-сайты', icon: 'fa-globe' },
     { key: 'posts', label: 'Посты', icon: 'fa-newspaper' },
     { key: 'publish', label: 'Публикация', icon: 'fa-paper-plane' },
     { key: 'settings', label: 'Настройки', icon: 'fa-cog' },
@@ -223,8 +282,27 @@ export default function App() {
           {activeTab === 'dashboard' && (
             <Dashboard
               stats={stats}
-              recentPosts={posts}
+              recentPosts={[
+                ...posts.map(p => ({ ...p, source: 'telegram' as const })),
+                ...webPosts.map(wp => ({
+                  id: wp.id,
+                  channelId: wp.siteId,
+                  channelTitle: wp.siteName,
+                  channelUsername: new URL(wp.siteUrl).hostname,
+                  text: `${wp.title}\n\n${wp.content}`,
+                  mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
+                  mediaUrl: wp.imageUrl,
+                  views: Math.floor(Math.random() * 10000),
+                  date: wp.date,
+                  parsedAt: wp.parsedAt,
+                  status: wp.status,
+                  hashtags: wp.keywords.map(k => `#${k}`),
+                  hasMedia: !!wp.imageUrl,
+                  source: 'web' as const,
+                })),
+              ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())}
               channels={channels}
+              sites={sites}
               onNavigate={(tab) => setActiveTab(tab as TabType)}
             />
           )}
@@ -236,19 +314,92 @@ export default function App() {
               onToggle={handleToggleChannel}
             />
           )}
+          {activeTab === 'sites' && (
+            <SitesManager
+              sites={sites}
+              onAdd={handleAddSite}
+              onRemove={handleRemoveSite}
+              onToggle={handleToggleSite}
+              onUpdate={handleUpdateSite}
+              onParse={handleParse}
+              isParsing={isParsing}
+            />
+          )}
           {activeTab === 'posts' && (
             <PostsList
-              posts={posts}
-              channels={channels.map(ch => ({ id: ch.id, title: ch.title, topics: ch.topics, keywords: ch.keywords }))}
-              onUpdateStatus={handleUpdatePostStatus}
-              onBulkUpdate={handleBulkUpdate}
+              posts={[
+                ...posts.map(p => ({ ...p, source: 'telegram' as const })),
+                ...webPosts.map(wp => ({
+                  id: wp.id,
+                  channelId: wp.siteId,
+                  channelTitle: wp.siteName,
+                  channelUsername: new URL(wp.siteUrl).hostname,
+                  text: `${wp.title}\n\n${wp.content}`,
+                  mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
+                  mediaUrl: wp.imageUrl,
+                  views: Math.floor(Math.random() * 10000),
+                  date: wp.date,
+                  parsedAt: wp.parsedAt,
+                  status: wp.status,
+                  hashtags: wp.keywords.map(k => `#${k}`),
+                  hasMedia: !!wp.imageUrl,
+                  source: 'web' as const,
+                })),
+              ]}
+              channels={[
+                ...channels.map(ch => ({ id: ch.id, title: ch.title, topics: ch.topics, keywords: ch.keywords })),
+                ...sites.map(s => ({ id: s.id, title: s.name, topics: s.topics, keywords: s.keywords })),
+              ]}
+              onUpdateStatus={(id, status) => {
+                const isWebPost = webPosts.some(wp => wp.id === id);
+                if (isWebPost) {
+                  handleUpdateWebPostStatus(id, status);
+                } else {
+                  handleUpdatePostStatus(id, status);
+                }
+              }}
+              onBulkUpdate={(ids, status) => {
+                const webPostIds = ids.filter(id => webPosts.some(wp => wp.id === id));
+                const telegramPostIds = ids.filter(id => posts.some(p => p.id === id));
+                if (webPostIds.length > 0) handleBulkUpdateWebPosts(webPostIds, status);
+                if (telegramPostIds.length > 0) handleBulkUpdate(telegramPostIds, status);
+              }}
             />
           )}
           {activeTab === 'publish' && (
             <PublishQueue
-              posts={posts}
-              onUpdateStatus={handleUpdatePostStatus}
-              onBulkUpdate={handleBulkUpdate}
+              posts={[
+                ...posts,
+                ...webPosts.map(wp => ({
+                  id: wp.id,
+                  channelId: wp.siteId,
+                  channelTitle: wp.siteName,
+                  channelUsername: new URL(wp.siteUrl).hostname,
+                  text: `${wp.title}\n\n${wp.content}`,
+                  mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
+                  mediaUrl: wp.imageUrl,
+                  views: Math.floor(Math.random() * 10000),
+                  date: wp.date,
+                  parsedAt: wp.parsedAt,
+                  status: wp.status,
+                  hashtags: wp.keywords.map(k => `#${k}`),
+                  hasMedia: !!wp.imageUrl,
+                })),
+              ]}
+              onUpdateStatus={(id, status) => {
+                const isWebPost = webPosts.some(wp => wp.id === id);
+                if (isWebPost) {
+                  handleUpdateWebPostStatus(id, status);
+                } else {
+                  handleUpdatePostStatus(id, status);
+                }
+              }}
+              onBulkUpdate={(ids, status) => {
+                const webPostIds = ids.filter(id => webPosts.some(wp => wp.id === id));
+                const telegramPostIds = ids.filter(id => posts.some(p => p.id === id));
+                if (webPostIds.length > 0) handleBulkUpdateWebPosts(webPostIds, status);
+                if (telegramPostIds.length > 0) handleBulkUpdate(telegramPostIds, status);
+              }}
             />
           )}
           {activeTab === 'settings' && (

@@ -1,14 +1,17 @@
 import React from 'react';
 import { DashboardStats, Post, Channel } from '../types';
 
+import { WebSite } from '../types';
+
 interface Props {
   stats: DashboardStats;
   recentPosts: Post[];
   channels: Channel[];
+  sites?: WebSite[];
   onNavigate: (tab: string) => void;
 }
 
-export default function Dashboard({ stats, recentPosts, channels, onNavigate }: Props) {
+export default function Dashboard({ stats, recentPosts, channels, sites = [], onNavigate }: Props) {
   const statCards = [
     { label: 'Всего каналов', value: stats.totalChannels, icon: 'fa-broadcast-tower', color: 'from-blue-500 to-blue-600' },
     { label: 'Активных', value: stats.activeChannels, icon: 'fa-check-circle', color: 'from-green-500 to-green-600' },
@@ -54,6 +57,35 @@ export default function Dashboard({ stats, recentPosts, channels, onNavigate }: 
           </div>
         ))}
       </div>
+
+      {/* Sites Info */}
+      {sites.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <i className="fas fa-globe text-blue-600"></i>
+              Веб-сайты
+            </h2>
+            <button onClick={() => onNavigate('sites')} className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Все сайты →
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {sites.slice(0, 6).map(site => (
+              <div key={site.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i className="fas fa-globe text-white text-xs"></i>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{site.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{site.url}</p>
+                </div>
+                <div className={`w-2.5 h-2.5 rounded-full ${site.isActive ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Posts */}
