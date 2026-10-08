@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ParserSettings } from '../types';
+import { ParserSettings, AVAILABLE_TOPICS } from '../types';
 
 interface Props {
   settings: ParserSettings;
@@ -208,6 +208,43 @@ export default function Settings({ settings, onSave, onReset }: Props) {
               <span className="text-sm text-gray-400">Ключевые слова не добавлены</span>
             )}
           </div>
+        </div>
+
+        {/* Global Topics Filter */}
+        <div className="mt-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            <i className="fas fa-layer-group text-purple-500 mr-1"></i>
+            Глобальные тематики (фильтр для всех каналов)
+          </label>
+          <p className="text-xs text-gray-500 mb-3">Посты будут собираться только из каналов, относящихся к выбранным тематикам. Если не выбрано ни одной — собираются все.</p>
+          <div className="flex flex-wrap gap-2">
+            {AVAILABLE_TOPICS.map(topic => (
+              <button
+                key={topic}
+                onClick={() => {
+                  const current = local.filterTopics || [];
+                  const updated = current.includes(topic)
+                    ? current.filter(t => t !== topic)
+                    : [...current, topic];
+                  setLocal({ ...local, filterTopics: updated });
+                }}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  (local.filterTopics || []).includes(topic)
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {(local.filterTopics || []).includes(topic) && <i className="fas fa-check mr-1 text-xs"></i>}
+                {topic}
+              </button>
+            ))}
+          </div>
+          {(local.filterTopics || []).length > 0 && (
+            <div className="flex items-center gap-2 mt-3 text-xs text-gray-500">
+              <i className="fas fa-check-circle text-purple-500"></i>
+              Выбрано тематик: {(local.filterTopics || []).length} из {AVAILABLE_TOPICS.length}
+            </div>
+          )}
         </div>
       </div>
 

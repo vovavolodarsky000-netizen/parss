@@ -239,6 +239,7 @@ export default function App() {
           {activeTab === 'posts' && (
             <PostsList
               posts={posts}
+              channels={channels.map(ch => ({ id: ch.id, title: ch.title, topics: ch.topics, keywords: ch.keywords }))}
               onUpdateStatus={handleUpdatePostStatus}
               onBulkUpdate={handleBulkUpdate}
             />

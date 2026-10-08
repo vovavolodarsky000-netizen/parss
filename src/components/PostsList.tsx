@@ -3,19 +3,27 @@ import { Post } from '../types';
 
 interface Props {
   posts: Post[];
+  channels?: Array<{ id: string; title: string; topics: string[]; keywords: string[] }>;
   onUpdateStatus: (id: string, status: Post['status']) => void;
   onBulkUpdate: (ids: string[], status: Post['status']) => void;
 }
 
-export default function PostsList({ posts, onUpdateStatus, onBulkUpdate }: Props) {
+export default function PostsList({ posts, channels: allChannels = [], onUpdateStatus, onBulkUpdate }: Props) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
+  const [filterTopic, setFilterTopic] = useState<string>('all');
   const [selected, setSelected] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
 
   const channels = [...new Set(posts.map(p => p.channelTitle))];
+  const allTopics = [...new Set(allChannels.flatMap(ch => ch.topics))];
+
+  // Map channel title to channel data
+  const getChannelData = (channelTitle: string) => {
+    return allChannels.find(ch => ch.title === channelTitle);
+  };
 
   const filtered = posts.filter(p => {
     const matchesSearch = p.text.toLowerCase().includes(search.toLowerCase()) ||
@@ -23,7 +31,9 @@ export default function PostsList({ posts, onUpdateStatus, onBulkUpdate }: Props
       p.hashtags.some(h => h.toLowerCase().includes(search.toLowerCase()));
     const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
     const matchesChannel = filterChannel === 'all' || p.channelTitle === filterChannel;
-    return matchesSearch && matchesStatus && matchesChannel;
+    const channelData = getChannelData(p.channelTitle);
+    const matchesTopic = filterTopic === 'all' || (channelData && channelData.topics.includes(filterTopic));
+    return matchesSearch && matchesStatus && matchesChannel && matchesTopic;
   });
 
   const toggleSelect = (id: string) => {
@@ -104,7 +114,7 @@ export default function PostsList({ posts, onUpdateStatus, onBulkUpdate }: Props
           <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
           <input
             type="text"
-            placeholder="Поиск по тексту, каналу, хештегам..."
+            placeholder="Поиск по тексту, каналу, хештегам, ключевым словам..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
@@ -120,6 +130,18 @@ export default function PostsList({ posts, onUpdateStatus, onBulkUpdate }: Props
             <option key={ch} value={ch}>{ch}</option>
           ))}
         </select>
+        {allTopics.length > 0 && (
+          <select
+            value={filterTopic}
+            onChange={e => setFilterTopic(e.target.value)}
+            className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+          >
+            <option value="all">Все тематики</option>
+            {allTopics.map(topic => (
+              <option key={topic} value={topic}>{topic}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Bulk Actions */}
@@ -166,12 +188,12 @@ export default function PostsList({ posts, onUpdateStatus, onBulkUpdate }: Props
               selected.includes(post.id) ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100 hover:shadow-md'
             }`}>
               <div className="p-4">
-                <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3">
                   <button onClick={() => toggleSelect(post.id)} className="mt-1">
                     <i className={`fas ${selected.includes(post.id) ? 'fa-check-square text-blue-600' : 'fa-square text-gray-300'}`}></i>
                   </button>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className="text-sm font-semibold text-gray-900">{post.channelTitle}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         post.status === 'new' ? 'bg-blue-100 text-blue-700' :
@@ -187,8 +209,16 @@ export default function PostsList({ posts, onUpdateStatus, onBulkUpdate }: Props
                           {post.mediaType}
                         </span>
                       )}
-                    </div>
-                    <p className={`text-sm text-gray-700 ${expandedPost === post.id ? '' : 'line-clamp-2'}`}>
+                      {(() => {
+                        const chData = getChannelData(post.channelTitle);
+                        if (chData && chData.topics.length > 0) {
+                          return chData.topics.slice(0, 2).map(t => (
+                            <span key={t} className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600">{t}</span>
+                          ));
+                        }
+                        return null;
+                      })()}
+                    </div>                    <p className={`text-sm text-gray-700 ${expandedPost === post.id ? '' : 'line-clamp-2'}`}>
                       {post.text}
                     </p>
                     {post.hashtags.length > 0 && (

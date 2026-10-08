@@ -9,6 +9,7 @@ const defaultSettings: ParserSettings = {
   maxPostsPerChannel: 50,
   autoApprove: false,
   filterKeywords: [],
+  filterTopics: [],
   filterMinViews: 0,
   filterMediaOnly: false,
   apiToken: '',
@@ -19,14 +20,14 @@ const defaultSettings: ParserSettings = {
 // Generate mock data
 function generateMockChannels(): Channel[] {
   const channels = [
-    { username: 'technews_ru', title: 'Технологии и Новости', subscribers: 145000, category: 'Технологии' },
-    { username: 'crypto_signals', title: 'Crypto Signals', subscribers: 89000, category: 'Крипто' },
-    { username: 'design_daily', title: 'Design Daily', subscribers: 67000, category: 'Дизайн' },
-    { username: 'startup_news', title: 'Стартапы и Бизнес', subscribers: 234000, category: 'Бизнес' },
-    { username: 'ai_machine_learning', title: 'AI & Machine Learning', subscribers: 178000, category: 'Технологии' },
-    { username: 'marketing_pro', title: 'Маркетинг PRO', subscribers: 56000, category: 'Маркетинг' },
-    { username: 'python_daily', title: 'Python Daily', subscribers: 92000, category: 'Программирование' },
-    { username: 'world_news_24', title: 'Мировые Новости 24', subscribers: 312000, category: 'Новости' },
+    { username: 'technews_ru', title: 'Технологии и Новости', subscribers: 145000, category: 'Технологии', topics: ['Технологии', 'Наука'], keywords: ['AI', 'блокчейн', 'стартап', 'инновации'] },
+    { username: 'crypto_signals', title: 'Crypto Signals', subscribers: 89000, category: 'Крипто', topics: ['Крипто', 'Финансы'], keywords: ['bitcoin', 'ethereum', 'трейдинг', 'DeFi'] },
+    { username: 'design_daily', title: 'Design Daily', subscribers: 67000, category: 'Дизайн', topics: ['Дизайн', 'Технологии'], keywords: ['UI', 'UX', 'Figma', 'типографика'] },
+    { username: 'startup_news', title: 'Стартапы и Бизнес', subscribers: 234000, category: 'Бизнес', topics: ['Бизнес', 'Финансы', 'Маркетинг'], keywords: ['инвестиции', 'MVP', 'раунд', 'питч'] },
+    { username: 'ai_machine_learning', title: 'AI & Machine Learning', subscribers: 178000, category: 'Технологии', topics: ['Технологии', 'Программирование', 'Наука'], keywords: ['нейросеть', 'GPT', 'ML', 'deep learning'] },
+    { username: 'marketing_pro', title: 'Маркетинг PRO', subscribers: 56000, category: 'Маркетинг', topics: ['Маркетинг', 'Бизнес'], keywords: ['SMM', 'контент', 'таргет', 'воронка'] },
+    { username: 'python_daily', title: 'Python Daily', subscribers: 92000, category: 'Программирование', topics: ['Программирование', 'Технологии'], keywords: ['Python', 'Django', 'FastAPI', 'data science'] },
+    { username: 'world_news_24', title: 'Мировые Новости 24', subscribers: 312000, category: 'Новости', topics: ['Новости', 'Политика'], keywords: ['срочно', ' Breaking', 'геополитика', 'экономика'] },
   ];
 
   return channels.map((ch, i) => ({
@@ -38,6 +39,8 @@ function generateMockChannels(): Channel[] {
     lastParsed: i < 4 ? new Date(Date.now() - Math.random() * 86400000).toISOString() : null,
     avatar: `https://api.dicebear.com/4.0/identicon/${ch.username}.png?size=80`,
     category: ch.category,
+    topics: ch.topics,
+    keywords: ch.keywords,
     addedAt: new Date(Date.now() - Math.random() * 2592000000).toISOString(),
   }));
 }
@@ -200,6 +203,11 @@ export function simulateParsing(): Post[] {
     '🎯 Новый подход к UX-дизайну: как данные о пользователях меняют индустрию.',
     '💡 Инсайдерская информация: крупный технологический гигант готовит революционный продукт.',
     '🌐 Интернет вещей достиг нового рубежа: более 50 млрд подключённых устройств по всему миру.',
+    '🚀 Новый AI-фреймворк ускоряет разработку в 10 раз. Поддерживает нейросеть, GPT и deep learning.',
+    '💰 Bitcoin преодолел $100K! DeFi и трейдинг на пике. Институциональные инвестиции растут.',
+    '🎨 UI/UX тренды: Figma представила новые инструменты для дизайна. Типографика и минимализм.',
+    '📊 Стартап привлёк инвестиции на раунде Series B. MVP показал рост конверсии на 200%.',
+    '📱 SMM стратегия 2026: контент-маркетинг и таргетированная реклама через воронку продаж.',
   ];
 
   channels.forEach(channel => {

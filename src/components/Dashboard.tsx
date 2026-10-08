@@ -100,21 +100,53 @@ export default function Dashboard({ stats, recentPosts, channels, onNavigate }: 
           </div>
           <div className="space-y-3">
             {topChannels.map((channel, i) => (
-              <div key={channel.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                <span className="text-lg font-bold text-gray-400 w-6">#{i + 1}</span>
-                <img src={channel.avatar} alt="" className="w-10 h-10 rounded-full" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{channel.title}</p>
-                  <p className="text-xs text-gray-500">@{channel.username}</p>
+              <div key={channel.id} className="p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg font-bold text-gray-400 w-6">#{i + 1}</span>
+                  <img src={channel.avatar} alt="" className="w-10 h-10 rounded-full" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{channel.title}</p>
+                    <p className="text-xs text-gray-500">@{channel.username}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{(channel.subscribers / 1000).toFixed(1)}K</p>
+                    <p className="text-xs text-gray-500">подписчиков</p>
+                  </div>
+                  <div className={`w-2.5 h-2.5 rounded-full ${channel.isActive ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-gray-900">{(channel.subscribers / 1000).toFixed(1)}K</p>
-                  <p className="text-xs text-gray-500">подписчиков</p>
-                </div>
-                <div className={`w-2.5 h-2.5 rounded-full ${channel.isActive ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                {channel.topics.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2 ml-9">
+                    {channel.topics.slice(0, 3).map(topic => (
+                      <span key={topic} className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-full">{topic}</span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Topics Distribution */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <i className="fas fa-layer-group text-purple-600"></i>
+          Распределение по тематикам
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {(() => {
+            const topicCounts: Record<string, number> = {};
+            channels.forEach(ch => ch.topics.forEach(t => { topicCounts[t] = (topicCounts[t] || 0) + 1; }));
+            return Object.entries(topicCounts)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 10)
+              .map(([topic, count]) => (
+                <div key={topic} className="bg-purple-50 rounded-lg p-3 text-center">
+                  <p className="text-2xl font-bold text-purple-600">{count}</p>
+                  <p className="text-xs text-purple-700 font-medium mt-1">{topic}</p>
+                </div>
+              ));
+          })()}
         </div>
       </div>
 

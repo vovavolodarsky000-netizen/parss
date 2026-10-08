@@ -7,8 +7,33 @@ export interface Channel {
   lastParsed: string | null;
   avatar: string;
   category: string;
+  topics: string[];
+  keywords: string[];
   addedAt: string;
 }
+
+export const AVAILABLE_TOPICS = [
+  'Технологии',
+  'Крипто',
+  'Дизайн',
+  'Бизнес',
+  'Маркетинг',
+  'Программирование',
+  'Новости',
+  'Финансы',
+  'Образование',
+  'Медицина',
+  'Спорт',
+  'Путешествия',
+  'Еда',
+  'Наука',
+  'Кино',
+  'Музыка',
+  'Автомобили',
+  'Недвижимость',
+  'Политика',
+  'Развлечения',
+];
 
 export interface Post {
   id: string;
@@ -31,6 +56,7 @@ export interface ParserSettings {
   maxPostsPerChannel: number;
   autoApprove: boolean;
   filterKeywords: string[];
+  filterTopics: string[];
   filterMinViews: number;
   filterMediaOnly: boolean;
   apiToken: string;
