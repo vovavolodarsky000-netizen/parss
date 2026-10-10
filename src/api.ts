@@ -28,12 +28,13 @@ interface User {
   role: string;
 }
 
-// Хранилище токенов
-let accessToken: string | null = localStorage.getItem('access_token');
-let refreshToken: string | null = localStorage.getItem('refresh_token');
+// SEC-002: токены теперь хранятся в httpOnly cookies, не в localStorage
+// Эти переменные используются только для отслеживания состояния
+let accessToken: string | null = null;
+let refreshToken: string | null = null;
 
-// CSRF токен (SEC-003)
-let csrfToken: string | null = null;
+// CSRF токен (SEC-003, BUG-003: сохраняем в sessionStorage)
+let csrfToken: string | null = sessionStorage.getItem('csrf_token');
 
 /**
  * Получение CSRF токена с сервера
@@ -46,6 +47,8 @@ async function fetchCsrfToken(): Promise<string | null> {
     const data = await response.json();
     if (data.success && data.data?.csrfToken) {
       csrfToken = data.data.csrfToken;
+      // BUG-003: сохраняем токен в sessionStorage
+      sessionStorage.setItem('csrf_token', csrfToken!);
       return csrfToken;
     }
   } catch (error) {
@@ -96,18 +99,32 @@ async function apiFetch<T>(
     const response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include', // SEC-002: отправляем cookies с токенами
     });
 
     const data = await response.json();
 
-    // Если CSRF токен недействителен, пробуем обновить (SEC-006)
+    // Если CSRF токен недействителен, пробуем обновить (SEC-006, BUG-002)
     if (response.status === 403 && data.error?.code === 'CSRF_TOKEN_INVALID') {
       csrfToken = null;
+      sessionStorage.removeItem('csrf_token');
       const newToken = await fetchCsrfToken();
       if (newToken) {
         (headers as Record<string, string>)['X-CSRF-Token'] = newToken;
         const retryResponse = await fetch(url, { ...options, headers });
-        return retryResponse.json();
+        const retryData = await retryResponse.json();
+        
+        // BUG-002: проверяем статус retry
+        if (!retryResponse.ok) {
+          return {
+            success: false,
+            error: retryData.error || {
+              code: 'RETRY_FAILED',
+              message: 'Повторный запрос не удался',
+            },
+          };
+        }
+        return retryData;
       }
     }
 

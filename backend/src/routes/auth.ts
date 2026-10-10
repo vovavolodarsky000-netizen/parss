@@ -172,6 +172,21 @@ router.post(
       email: user.email,
     });
 
+    // SEC-002: устанавливаем токены в httpOnly cookies
+    res.cookie('access_token', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней
+    });
+
+    res.cookie('refresh_token', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
+    });
+
     res.json({
       success: true,
       data: {
@@ -181,7 +196,7 @@ router.post(
           username: user.username,
           role: user.role,
         },
-        tokens,
+        // SEC-002: не возвращаем токены в теле ответа
       },
     });
   })

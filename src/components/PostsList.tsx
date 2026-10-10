@@ -66,17 +66,18 @@ const PostsList = React.memo(function PostsList({ posts, channels: allChannels =
     setCurrentPage(1);
   }, [debouncedSearch, filterStatus, filterChannel, filterTopic]);
 
-  const toggleSelect = (id: string) => {
+  // CODE-003: мемоизация функций
+  const toggleSelect = useCallback((id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
+  }, []);
 
-  const selectAll = () => {
+  const selectAll = useCallback(() => {
     if (selected.length === filtered.length) {
       setSelected([]);
     } else {
       setSelected(filtered.map(p => p.id));
     }
-  };
+  }, [selected.length, filtered]);
 
   const statusCounts = useMemo(() => ({
     all: posts.length,

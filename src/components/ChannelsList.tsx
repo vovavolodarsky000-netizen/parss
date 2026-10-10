@@ -29,6 +29,8 @@ const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemov
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterTopic, setFilterTopic] = useState('all');
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1); // BUG-001: пагинация
+  const pageSize = 20; // BUG-001: пагинация
   const [newChannel, setNewChannel] = useState({
     username: '',
     title: '',
@@ -55,7 +57,20 @@ const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemov
     });
   }, [channels, debouncedSearch, filterCategory, filterTopic]);
 
-  const handleAdd = () => {
+  // BUG-001: пагинация
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginatedChannels = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  // Сброс страницы при изменении фильтров
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterCategory, filterTopic]);
+
+  // CODE-004: мемоизация функций
+  const handleAdd = useCallback(() => {
     if (!newChannel.username || !newChannel.title) return;
     onAdd({
       ...newChannel,
@@ -66,28 +81,28 @@ const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemov
     setNewChannel({ username: '', title: '', subscribers: 0, category: '', topics: [], keywords: [] });
     setNewKeyword('');
     setShowAddModal(false);
-  };
+  }, [newChannel, onAdd]);
 
-  const addKeyword = () => {
+  const addKeyword = useCallback(() => {
     const kw = newKeyword.trim();
     if (kw && !newChannel.keywords.includes(kw)) {
       setNewChannel({ ...newChannel, keywords: [...newChannel.keywords, kw] });
       setNewKeyword('');
     }
-  };
+  }, [newKeyword, newChannel.keywords]);
 
-  const removeKeyword = (keyword: string) => {
+  const removeKeyword = useCallback((keyword: string) => {
     setNewChannel({ ...newChannel, keywords: newChannel.keywords.filter(k => k !== keyword) });
-  };
+  }, [newChannel.keywords]);
 
-  const toggleTopic = (topic: string) => {
+  const toggleTopic = useCallback((topic: string) => {
     setNewChannel(prev => ({
       ...prev,
       topics: prev.topics.includes(topic)
         ? prev.topics.filter(t => t !== topic)
         : [...prev.topics, topic],
     }));
-  };
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -141,7 +156,7 @@ const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemov
 
       {/* Channels Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map(channel => (
+        {paginatedChannels.map(channel => (
           <div key={channel.id} className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
             <div className="p-5">
               <div className="flex items-start gap-4">
@@ -244,6 +259,54 @@ const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemov
           </div>
         ))}
       </div>
+
+      {/* BUG-001: UI для пагинации */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <i className="fas fa-chevron-left"></i>
+          </button>
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            let page: number;
+            if (totalPages <= 7) {
+              page = i + 1;
+            } else if (currentPage <= 4) {
+              page = i + 1;
+            } else if (currentPage >= totalPages - 3) {
+              page = totalPages - 6 + i;
+            } else {
+              page = currentPage - 3 + i;
+            }
+            return (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                  currentPage === page
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <i className="fas fa-chevron-right"></i>
+          </button>
+          <span className="text-sm text-gray-500 ml-2">
+            {filtered.length} каналов
+          </span>
+        </div>
+      )}
 
       {filtered.length === 0 && (
         <div className="text-center py-12">

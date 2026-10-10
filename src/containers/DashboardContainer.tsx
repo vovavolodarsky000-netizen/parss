@@ -12,6 +12,7 @@ export default function Dashboard() {
     posts,
     sites,
     webPosts,
+    isLoading,
   } = useAppStore();
 
   const stats = useDashboardStats(channels, posts, sites, webPosts);
@@ -24,6 +25,18 @@ export default function Dashboard() {
   const handleNavigate = useCallback((tab: string) => {
     navigate(`/${tab === 'dashboard' ? '' : tab}`);
   }, [navigate]);
+
+  // UX-001: индикатор загрузки
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Загрузка данных...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DashboardComponent

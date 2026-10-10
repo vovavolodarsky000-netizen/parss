@@ -76,17 +76,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   error: null,
   isLoading: false,
 
-  // Загрузка данных с обработкой ошибок
+  // Загрузка данных с обработкой ошибок (PERF-001: один set() вместо двух)
   loadData: () => {
     try {
-      set({ isLoading: true, error: null });
       set({
+        isLoading: true,
+        error: null,
         channels: getChannels(),
         posts: getPosts(),
         sites: getWebSites(),
         webPosts: getWebPosts(),
-        isLoading: false,
       });
+      // Устанавливаем isLoading в false после загрузки данных
+      set({ isLoading: false });
     } catch (error) {
       console.error('[Store] Ошибка загрузки данных:', error);
       set({
@@ -96,11 +98,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  // Парсинг с обработкой ошибок
+  // Парсинг с обработкой ошибок (BUG-004: сохраняем ID таймера для отмены)
   handleParse: () => {
     set({ isParsing: true, parseResult: null, error: null });
 
-    setTimeout(() => {
+    const parseTimeout = setTimeout(() => {
       try {
         const newPosts = simulateParsing();
         const newWebPosts = simulateWebParsing();
@@ -121,6 +123,15 @@ export const useAppStore = create<AppState>((set, get) => ({
         });
       }
     }, 2000);
+
+    // Сохраняем ID таймера для возможности отмены
+    return parseTimeout;
+  },
+
+  // Отмена парсинга (BUG-004)
+  cancelParse: (timeoutId: NodeJS.Timeout) => {
+    clearTimeout(timeoutId);
+    set({ isParsing: false });
   },
 
   handleAddChannel: (channel) => {
