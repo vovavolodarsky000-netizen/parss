@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Channel, AVAILABLE_TOPICS } from '../types';
+import { useDebounce } from '../hooks/useDebounce';
 
 interface Props {
   /** Список каналов для отображения */
@@ -24,6 +25,7 @@ interface Props {
 const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemove, onToggle }: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300); // PERF-003: debounce поиска
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterTopic, setFilterTopic] = useState('all');
   const [expandedChannel, setExpandedChannel] = useState<string | null>(null);
@@ -44,14 +46,14 @@ const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemov
     return channels.filter(ch => {
       const topics = ch.topics || [];
       const keywords = ch.keywords || [];
-      const matchesSearch = ch.title.toLowerCase().includes(search.toLowerCase()) ||
-        ch.username.toLowerCase().includes(search.toLowerCase()) ||
-        keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
+      const matchesSearch = ch.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        ch.username.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        keywords.some(k => k.toLowerCase().includes(debouncedSearch.toLowerCase()));
       const matchesCategory = filterCategory === 'all' || ch.category === filterCategory;
       const matchesTopic = filterTopic === 'all' || topics.includes(filterTopic);
       return matchesSearch && matchesCategory && matchesTopic;
     });
-  }, [channels, search, filterCategory, filterTopic]);
+  }, [channels, debouncedSearch, filterCategory, filterTopic]);
 
   const handleAdd = () => {
     if (!newChannel.username || !newChannel.title) return;

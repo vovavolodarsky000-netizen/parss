@@ -1,5 +1,6 @@
 /**
  * API клиент для взаимодействия с бэкендом
+ * Поддерживает CSRF защиту (SEC-003)
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -31,6 +32,28 @@ interface User {
 let accessToken: string | null = localStorage.getItem('access_token');
 let refreshToken: string | null = localStorage.getItem('refresh_token');
 
+// CSRF токен (SEC-003)
+let csrfToken: string | null = null;
+
+/**
+ * Получение CSRF токена с сервера
+ */
+async function fetchCsrfToken(): Promise<string | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/csrf-token`, {
+      credentials: 'include',
+    });
+    const data = await response.json();
+    if (data.success && data.data?.csrfToken) {
+      csrfToken = data.data.csrfToken;
+      return csrfToken;
+    }
+  } catch (error) {
+    console.error('Failed to fetch CSRF token:', error);
+  }
+  return null;
+}
+
 /**
  * Базовый fetch с обработкой ошибок и автоматическим обновлением токена
  */
@@ -40,6 +63,12 @@ async function apiFetch<T>(
 ): Promise<ApiResponse<T>> {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  // Получаем CSRF токен для небезопасных методов (SEC-003)
+  const method = (options.method || 'GET').toUpperCase();
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !csrfToken) {
+    await fetchCsrfToken();
+  }
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -47,6 +76,11 @@ async function apiFetch<T>(
 
   if (accessToken) {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  // Добавляем CSRF токен в заголовок (SEC-003)
+  if (csrfToken && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
   }
 
   try {

@@ -7,6 +7,15 @@ import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import logger from '../services/logger.js';
 import telegramService from '../services/telegram.js';
 
+// Схема валидации query-параметров (BACK-003)
+const channelQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  isActive: z.string().optional().transform(v => v === undefined ? undefined : v === 'true'),
+  category: z.string().optional(),
+  topic: z.string().optional(),
+});
+
 const router = Router();
 
 // Все маршруты требуют аутентификации
@@ -28,10 +37,12 @@ const createChannelSchema = z.object({
 router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
-    const { page = '1', limit = '20', isActive, category, topic } = req.query;
+    // Валидация query-параметров (BACK-003)
+    const query = channelQuerySchema.parse(req.query);
+    const { page, limit, isActive, category, topic } = query;
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    const take = parseInt(limit as string);
+    const skip = (page - 1) * limit;
+    const take = limit;
 
     const where: {
       userId: string;
@@ -41,7 +52,7 @@ router.get(
     } = { userId: req.user!.id };
 
     if (isActive !== undefined) {
-      where.isActive = isActive === 'true';
+      where.isActive = isActive;
     }
 
     if (category) {
@@ -51,7 +62,7 @@ router.get(
     if (topic) {
       where.topics = {
         some: {
-          topic: { name: topic as string },
+          topic: { name: topic },
         },
       };
     }
@@ -89,10 +100,10 @@ router.get(
           postsCount: ch._count.posts,
         })),
         pagination: {
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
+          page,
+          limit,
           total,
-          totalPages: Math.ceil(total / parseInt(limit as string)),
+          totalPages: Math.ceil(total / limit),
         },
       },
     });

@@ -13,9 +13,9 @@ export const config = {
 
   // JWT
   jwt: {
-    secret: process.env.JWT_SECRET || 'default-secret-change-in-production',
+    secret: process.env.JWT_SECRET || 'dev-only-default-secret-do-not-use-in-production',
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'default-refresh-secret',
+    refreshSecret: process.env.JWT_REFRESH_SECRET || 'dev-only-refresh-secret-do-not-use-in-production',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d',
   },
 
@@ -56,3 +56,32 @@ export const config = {
 };
 
 export type Config = typeof config;
+
+/**
+ * Валидация критических переменных окружения (SEC-001)
+ * В production режиме сервер не должен запускаться с дефолтными секретами
+ */
+export function validateConfig(): void {
+  if (config.env === 'production') {
+    const errors: string[] = [];
+
+    if (!process.env.JWT_SECRET || config.jwt.secret.includes('dev-only')) {
+      errors.push('JWT_SECRET: необходимо установить безопасный секретный ключ');
+    }
+    if (!process.env.JWT_REFRESH_SECRET || config.jwt.refreshSecret.includes('dev-only')) {
+      errors.push('JWT_REFRESH_SECRET: необходимо установить безопасный секретный ключ');
+    }
+    if (!process.env.DATABASE_URL) {
+      errors.push('DATABASE_URL: необходимо указать строку подключения к БД');
+    }
+    if (config.jwt.secret.length < 32) {
+      errors.push('JWT_SECRET: минимальная длина 32 символа');
+    }
+
+    if (errors.length > 0) {
+      console.error('❌ Ошибка конфигурации production окружения:');
+      errors.forEach(e => console.error(`   - ${e}`));
+      process.exit(1);
+    }
+  }
+}

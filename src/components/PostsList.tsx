@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Post } from '../types';
+import { useDebounce } from '../hooks/useDebounce';
 
 interface Props {
   /** Список постов для отображения */
@@ -22,12 +23,15 @@ interface Props {
  */
 const PostsList = React.memo(function PostsList({ posts, channels: allChannels = [], onUpdateStatus, onBulkUpdate }: Props) {
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300); // PERF-003: debounce поиска
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
   const [filterTopic, setFilterTopic] = useState<string>('all');
   const [selected, setSelected] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20; // Пагинация (PERF-002)
 
   const channels = useMemo(() => [...new Set(posts.map(p => p.channelTitle))], [posts]);
   const allTopics = useMemo(() => [...new Set(allChannels.flatMap(ch => ch.topics || []))], [allChannels]);
@@ -39,16 +43,28 @@ const PostsList = React.memo(function PostsList({ posts, channels: allChannels =
 
   const filtered = useMemo(() => {
     return posts.filter(p => {
-      const matchesSearch = p.text.toLowerCase().includes(search.toLowerCase()) ||
-        p.channelTitle.toLowerCase().includes(search.toLowerCase()) ||
-        p.hashtags.some(h => h.toLowerCase().includes(search.toLowerCase()));
+      const matchesSearch = p.text.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.channelTitle.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        p.hashtags.some(h => h.toLowerCase().includes(debouncedSearch.toLowerCase()));
       const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
       const matchesChannel = filterChannel === 'all' || p.channelTitle === filterChannel;
       const channelData = getChannelData(p.channelTitle);
       const matchesTopic = filterTopic === 'all' || (channelData && (channelData.topics || []).includes(filterTopic));
       return matchesSearch && matchesStatus && matchesChannel && matchesTopic;
     });
-  }, [posts, search, filterStatus, filterChannel, filterTopic, getChannelData]);
+  }, [posts, debouncedSearch, filterStatus, filterChannel, filterTopic, getChannelData]);
+
+  // Пагинация (PERF-002)
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const paginatedPosts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filtered.slice(start, start + pageSize);
+  }, [filtered, currentPage, pageSize]);
+
+  // Сброс страницы при изменении фильтров
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterStatus, filterChannel, filterTopic]);
 
   const toggleSelect = (id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -197,7 +213,7 @@ const PostsList = React.memo(function PostsList({ posts, channels: allChannels =
       {/* Posts */}
       {viewMode === 'list' ? (
         <div className="space-y-3">
-          {filtered.map(post => (
+          {paginatedPosts.map(post => (
             <div key={post.id} className={`bg-white rounded-xl shadow-sm border transition-all ${
               selected.includes(post.id) ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100 hover:shadow-md'
             }`}>
@@ -308,7 +324,7 @@ const PostsList = React.memo(function PostsList({ posts, channels: allChannels =
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(post => (
+          {paginatedPosts.map(post => (
             <div key={post.id} className={`bg-white rounded-xl shadow-sm border overflow-hidden transition-all hover:shadow-md ${
               selected.includes(post.id) ? 'border-blue-300' : 'border-gray-100'
             }`}>
@@ -360,6 +376,54 @@ const PostsList = React.memo(function PostsList({ posts, channels: allChannels =
         <div className="text-center py-12">
           <i className="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
           <p className="text-gray-500">Посты не найдены</p>
+        </div>
+      )}
+
+      {/* Пагинация */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-6">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <i className="fas fa-chevron-left"></i>
+          </button>
+          {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+            let page: number;
+            if (totalPages <= 7) {
+              page = i + 1;
+            } else if (currentPage <= 4) {
+              page = i + 1;
+            } else if (currentPage >= totalPages - 3) {
+              page = totalPages - 6 + i;
+            } else {
+              page = currentPage - 3 + i;
+            }
+            return (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                  currentPage === page
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
+            );
+          })}
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <i className="fas fa-chevron-right"></i>
+          </button>
+          <span className="text-sm text-gray-500 ml-2">
+            {filtered.length} постов
+          </span>
         </div>
       )}
     </div>

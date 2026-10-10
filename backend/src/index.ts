@@ -4,11 +4,13 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { createServer } from 'http';
-import { config } from './config.js';
+import { config, validateConfig } from './config.js';
 import logger from './services/logger.js';
 import { errorHandler, notFoundHandler, logRequest } from './middleware/error.js';
 import { prisma } from './lib/prisma.js';
 import webSocketService from './services/websocket.js';
+import { csrfProtection, getCsrfToken } from './middleware/csrf.js';
+import cookieParser from 'cookie-parser';
 
 // Импорт маршрутов
 import authRoutes from './routes/auth.js';
@@ -75,9 +77,17 @@ const limiter = rateLimit({
 
 app.use('/api/', limiter);
 
+// Cookie parser (для CSRF)
+app.use(cookieParser());
+
 // Body parsers
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// CSRF защита (SEC-003)
+// Применяется ко всем API маршрутам кроме health check
+app.use('/api', csrfProtection);
+app.get('/api/csrf-token', getCsrfToken);
 
 // Логирование запросов
 app.use(logRequest);
@@ -130,6 +140,9 @@ app.use(errorHandler);
 
 const startServer = async () => {
   try {
+    // Валидация конфигурации (SEC-001)
+    validateConfig();
+
     // Проверяем подключение к базе данных
     await prisma.$connect();
     logger.info('✅ Подключение к базе данных установлено');

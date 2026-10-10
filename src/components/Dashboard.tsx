@@ -193,12 +193,14 @@ const Dashboard = React.memo(function Dashboard({ stats, recentPosts, channels, 
         </div>
       </div>
 
-      {/* Activity Chart Placeholder */}
+      {/* Activity Chart */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Активность за неделю</h2>
         <div className="flex items-end gap-2 h-40">
           {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day, i) => {
-            const height = 20 + Math.random() * 80;
+            // Детерминированная высота на основе индекса (PERF-001)
+            const heights = [65, 45, 80, 55, 90, 35, 70];
+            const height = heights[i];
             return (
               <div key={day} className="flex-1 flex flex-col items-center gap-2">
                 <div className="w-full flex flex-col items-center justify-end h-32">
