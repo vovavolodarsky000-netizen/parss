@@ -446,6 +446,7 @@ docker run -p 80:80 tg-parser
 - **PostgreSQL** + **Prisma ORM** — надёжное серверное хранилище
 - **JWT** — аутентификация с refresh токенами
 - **gram.js** — реальная интеграция с Telegram API
+- **WebSocket** — real-time обновления
 - **Winston** — профессиональное логирование
 - **Helmet** + **CORS** + **Rate Limiting** — безопасность
 - **Zod** — валидация входных данных
@@ -459,6 +460,8 @@ docker run -p 80:80 tg-parser
 - ✅ CORS и безопасность (Helmet, Rate Limiting)
 - ✅ Аудит действий пользователей
 - ✅ Очереди задач для парсинга
+- ✅ WebSocket для real-time уведомлений
+- ✅ API versioning (v1)
 
 ### Быстрый старт бэкенда
 
@@ -473,6 +476,61 @@ npm run dev
 ```
 
 Подробная документация: [`backend/README.md`](./backend/README.md)
+
+## 🧪 Тестирование и качество кода
+
+### Запуск тестов
+
+```bash
+# Frontend тесты
+npm test
+
+# Backend тесты
+cd backend
+npm test
+
+# Покрытие кода
+npm run test:coverage
+```
+
+### Линтинг и форматирование
+
+```bash
+# Frontend
+npm run lint
+npm run format
+
+# Backend
+cd backend
+npm run lint
+npm run format
+```
+
+### CI/CD
+
+Проект включает GitHub Actions workflow (`.github/workflows/ci.yml`) для:
+- Автоматического тестирования при push/pull request
+- Проверки типов TypeScript
+- Линтинга кода
+- Сборки проекта
+- Деплоя (настраивается)
+
+## 🔄 Миграции данных
+
+Приложение автоматически мигрирует старые данные из localStorage при запуске. Миграции находятся в `src/migrations.ts`.
+
+## ⚡ Оптимизация производительности
+
+### Frontend
+- **React.memo** — мемоизация компонентов (Dashboard)
+- **useMemo** — мемоизация вычислений (статистика)
+- **useCallback** — мемоизация функций
+- **Custom hooks** — вынесение логики из компонентов
+
+### Backend
+- **Prisma include** — устранение N+1 запросов
+- **WebSocket** — real-time обновления без polling
+- **API versioning** — `/api/v1/*` для новых endpoints
 
 ## 📝 Лицензия
 

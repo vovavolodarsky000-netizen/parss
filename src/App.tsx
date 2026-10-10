@@ -1,14 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Channel, Post, ParserSettings, DashboardStats, TabType, WebSite, WebPost } from './types';
-import {
-  getChannels, getPosts, getSettings, saveSettings,
-  addChannel, removeChannel, toggleChannel,
-  updatePostStatus, bulkUpdateStatus, simulateParsing, resetData
-} from './store';
-import {
-  getWebSites, getWebPosts, addWebSite, removeWebSite, toggleWebSite, updateWebSite,
-  updateWebPostStatus as updateWebPostStatusAction, bulkUpdateWebPostStatus, simulateWebParsing
-} from './webStore';
+import React, { useState, useCallback, useMemo } from 'react';
+import { TabType } from './types';
+import { useAppData } from './hooks/useAppData';
+import { useDashboardStats } from './hooks/useDashboardStats';
 import Dashboard from './components/Dashboard';
 import ChannelsList from './components/ChannelsList';
 import PostsList from './components/PostsList';
@@ -18,144 +11,35 @@ import SitesManager from './components/SitesManager';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [sites, setSites] = useState<WebSite[]>([]);
-  const [webPosts, setWebPosts] = useState<WebPost[]>([]);
-  const [settings, setSettings] = useState<ParserSettings>(getSettings());
-  const [isParsing, setIsParsing] = useState(false);
-  const [parseResult, setParseResult] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const loadData = useCallback(() => {
-    setChannels(getChannels());
-    setPosts(getPosts());
-    setSites(getWebSites());
-    setWebPosts(getWebPosts());
-  }, []);
+  // Используем кастомный хук для всей логики данных
+  const {
+    channels,
+    posts,
+    sites,
+    webPosts,
+    settings,
+    isParsing,
+    parseResult,
+    handleParse,
+    handleAddChannel,
+    handleRemoveChannel,
+    handleToggleChannel,
+    handleUpdatePostStatus,
+    handleBulkUpdate,
+    handleSaveSettings,
+    handleReset,
+    handleAddSite,
+    handleRemoveSite,
+    handleToggleSite,
+    handleUpdateSite,
+    handleUpdateWebPostStatus,
+    handleBulkUpdateWebPosts,
+  } = useAppData();
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const stats: DashboardStats = {
-    totalChannels: channels.length,
-    activeChannels: channels.filter(ch => ch.isActive).length,
-    totalPosts: posts.length + webPosts.length,
-    newPosts: posts.filter(p => p.status === 'new').length + webPosts.filter(p => p.status === 'new').length,
-    approvedPosts: posts.filter(p => p.status === 'approved').length + webPosts.filter(p => p.status === 'approved').length,
-    publishedPosts: posts.filter(p => p.status === 'published').length + webPosts.filter(p => p.status === 'published').length,
-    lastParseTime: (() => {
-      const channelLast = channels.reduce((latest, ch) => {
-        if (ch.lastParsed && (!latest || new Date(ch.lastParsed) > new Date(latest))) {
-          return ch.lastParsed;
-        }
-        return latest;
-      }, null as string | null);
-      const siteLast = sites.reduce((latest, s) => {
-        if (s.lastParsed && (!latest || new Date(s.lastParsed) > new Date(latest))) {
-          return s.lastParsed;
-        }
-        return latest;
-      }, null as string | null);
-      if (channelLast && siteLast) {
-        return new Date(channelLast) > new Date(siteLast) ? channelLast : siteLast;
-      }
-      return channelLast || siteLast;
-    })(),
-    postsToday: posts.filter(p => {
-      const today = new Date();
-      const postDate = new Date(p.date);
-      return postDate.toDateString() === today.toDateString();
-    }).length + webPosts.filter(p => {
-      const today = new Date();
-      const postDate = new Date(p.date);
-      return postDate.toDateString() === today.toDateString();
-    }).length,
-  };
-
-  const handleParse = () => {
-    setIsParsing(true);
-    setParseResult(null);
-    
-    // Simulate parsing delay
-    setTimeout(() => {
-      const newPosts = simulateParsing();
-      const newWebPosts = simulateWebParsing();
-      loadData();
-      setIsParsing(false);
-      setParseResult(`Собрано ${newPosts.length + newWebPosts.length} новых постов (${newPosts.length} из каналов, ${newWebPosts.length} с сайтов)`);
-      setTimeout(() => setParseResult(null), 5000);
-    }, 2000);
-  };
-
-  const handleAddChannel = (channel: Omit<Channel, 'id' | 'addedAt'>) => {
-    addChannel(channel);
-    loadData();
-  };
-
-  const handleRemoveChannel = (id: string) => {
-    removeChannel(id);
-    loadData();
-  };
-
-  const handleToggleChannel = (id: string) => {
-    toggleChannel(id);
-    loadData();
-  };
-
-  const handleUpdatePostStatus = (id: string, status: Post['status']) => {
-    updatePostStatus(id, status);
-    loadData();
-  };
-
-  const handleBulkUpdate = (ids: string[], status: Post['status']) => {
-    bulkUpdateStatus(ids, status);
-    loadData();
-  };
-
-  const handleSaveSettings = (newSettings: ParserSettings) => {
-    setSettings(newSettings);
-    saveSettings(newSettings);
-  };
-
-  const handleReset = () => {
-    resetData();
-    localStorage.removeItem('tg_parser_sites');
-    localStorage.removeItem('tg_parser_web_posts');
-    loadData();
-    setSettings(getSettings());
-  };
-
-  const handleAddSite = (site: Omit<WebSite, 'id' | 'addedAt'>) => {
-    addWebSite(site);
-    loadData();
-  };
-
-  const handleRemoveSite = (id: string) => {
-    removeWebSite(id);
-    loadData();
-  };
-
-  const handleToggleSite = (id: string) => {
-    toggleWebSite(id);
-    loadData();
-  };
-
-  const handleUpdateSite = (id: string, updates: Partial<WebSite>) => {
-    updateWebSite(id, updates);
-    loadData();
-  };
-
-  const handleUpdateWebPostStatus = (id: string, status: WebPost['status']) => {
-    updateWebPostStatusAction(id, status);
-    loadData();
-  };
-
-  const handleBulkUpdateWebPosts = (ids: string[], status: WebPost['status']) => {
-    bulkUpdateWebPostStatus(ids, status);
-    loadData();
-  };
+  // Мемоизация статистики
+  const stats = useDashboardStats(channels, posts, sites, webPosts);
 
   const tabs: { key: TabType; label: string; icon: string }[] = [
     { key: 'dashboard', label: 'Дашборд', icon: 'fa-chart-line' },

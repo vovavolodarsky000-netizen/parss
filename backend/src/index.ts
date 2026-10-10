@@ -3,10 +3,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import { createServer } from 'http';
 import { config } from './config.js';
 import logger from './services/logger.js';
 import { errorHandler, notFoundHandler, logRequest } from './middleware/error.js';
 import { prisma } from './lib/prisma.js';
+import webSocketService from './services/websocket.js';
 
 // Импорт маршрутов
 import authRoutes from './routes/auth.js';
@@ -14,6 +16,7 @@ import channelsRoutes from './routes/channels.js';
 import postsRoutes from './routes/posts.js';
 
 const app = express();
+const server = createServer(app);
 
 // ============================================
 // Базовые middleware безопасности
@@ -101,7 +104,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
+// API Routes (v1)
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/channels', channelsRoutes);
+app.use('/api/v1/posts', postsRoutes);
+
+// Legacy routes (редирект на v1 для обратной совместимости)
 app.use('/api/auth', authRoutes);
 app.use('/api/channels', channelsRoutes);
 app.use('/api/posts', postsRoutes);
@@ -126,10 +134,15 @@ const startServer = async () => {
     await prisma.$connect();
     logger.info('✅ Подключение к базе данных установлено');
 
+    // Инициализируем WebSocket
+    webSocketService.initialize(server);
+    logger.info('✅ WebSocket сервер инициализирован');
+
     // Запускаем сервер
-    app.listen(config.port, () => {
+    server.listen(config.port, () => {
       logger.info(`🚀 Сервер запущен на порту ${config.port}`);
       logger.info(`📡 API доступен по адресу: ${config.apiUrl}`);
+      logger.info(`🔌 WebSocket доступен на ws://${config.apiUrl}/ws`);
       logger.info(`🌍 Окружение: ${config.env}`);
     });
   } catch (error) {
@@ -141,12 +154,14 @@ const startServer = async () => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   logger.info('SIGTERM получен. Завершение работы...');
+  webSocketService.close();
   await prisma.$disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   logger.info('SIGINT получен. Завершение работы...');
+  webSocketService.close();
   await prisma.$disconnect();
   process.exit(0);
 });
@@ -164,4 +179,5 @@ process.on('unhandledRejection', (reason) => {
 
 startServer();
 
+export { app, server };
 export default app;

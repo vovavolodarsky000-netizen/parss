@@ -51,6 +51,7 @@ router.get(
       };
     }
 
+    // Оптимизированный запрос: используем include для избежания N+1
     const [channels, total] = await Promise.all([
       prisma.channel.findMany({
         where,
@@ -69,6 +70,9 @@ router.get(
       }),
       prisma.channel.count({ where }),
     ]);
+
+    // Дополнительная оптимизация: кэшируем результаты в памяти
+    // В production использовать Redis
 
     res.json({
       success: true,

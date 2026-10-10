@@ -1,7 +1,5 @@
-import React from 'react';
-import { DashboardStats, Post, Channel } from '../types';
-
-import { WebSite } from '../types';
+import React, { useMemo } from 'react';
+import { DashboardStats, Post, Channel, WebSite } from '../types';
 
 interface Props {
   stats: DashboardStats;
@@ -11,7 +9,7 @@ interface Props {
   onNavigate: (tab: string) => void;
 }
 
-export default function Dashboard({ stats, recentPosts, channels, sites = [], onNavigate }: Props) {
+const Dashboard = React.memo(function Dashboard({ stats, recentPosts, channels, sites = [], onNavigate }: Props) {
   const statCards = [
     { label: 'Всего каналов', value: stats.totalChannels, icon: 'fa-broadcast-tower', color: 'from-blue-500 to-blue-600' },
     { label: 'Активных', value: stats.activeChannels, icon: 'fa-check-circle', color: 'from-green-500 to-green-600' },
@@ -204,4 +202,6 @@ export default function Dashboard({ stats, recentPosts, channels, sites = [], on
       </div>
     </div>
   );
-}
+});
+
+export default Dashboard;
