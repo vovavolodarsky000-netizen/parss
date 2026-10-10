@@ -18,6 +18,20 @@ interface LegacyChannel {
   keywords?: string[];
 }
 
+interface LegacyParseRule {
+  id: string;
+  name: string;
+  urlPattern: string;
+  titleSelector: string;
+  contentSelector: string;
+  dateSelector?: string;
+  imageSelector?: string;
+  authorSelector?: string;
+  linkSelector?: string;
+  maxItems: number;
+  isActive: boolean;
+}
+
 interface LegacyWebSite {
   id: string;
   name: string;
@@ -27,7 +41,7 @@ interface LegacyWebSite {
   addedAt: string;
   topics?: string[];
   keywords?: string[];
-  parseRules?: any[];
+  parseRules?: LegacyParseRule[];
 }
 
 const MIGRATION_VERSION_KEY = 'tg_parser_migration_version';

@@ -110,12 +110,20 @@ function generateMockPosts(channels: Channel[]): Post[] {
   return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
+/**
+ * Получение списка всех Telegram каналов
+ * 
+ * @returns {Channel[]} Массив каналов
+ * @description
+ * Загружает каналы из localStorage. Если данных нет, создаёт моковые данные.
+ * Гарантирует наличие полей topics и keywords для обратной совместимости.
+ */
 export function getChannels(): Channel[] {
   const stored = localStorage.getItem(CHANNELS_KEY);
   if (stored) {
     const channels = JSON.parse(stored);
     // Гарантируем наличие полей topics и keywords для обратной совместимости
-    return channels.map((ch: any) => ({
+    return channels.map((ch: Channel) => ({
       ...ch,
       topics: ch.topics || [],
       keywords: ch.keywords || [],
@@ -126,10 +134,22 @@ export function getChannels(): Channel[] {
   return mock;
 }
 
+/**
+ * Сохранение списка каналов в localStorage
+ * 
+ * @param channels - Массив каналов для сохранения
+ */
 export function saveChannels(channels: Channel[]): void {
   localStorage.setItem(CHANNELS_KEY, JSON.stringify(channels));
 }
 
+/**
+ * Получение списка всех постов
+ * 
+ * @returns {Post[]} Массив постов
+ * @description
+ * Загружает посты из localStorage. Если данных нет, создаёт моковые данные.
+ */
 export function getPosts(): Post[] {
   const stored = localStorage.getItem(POSTS_KEY);
   if (stored) {
@@ -141,10 +161,22 @@ export function getPosts(): Post[] {
   return mock;
 }
 
+/**
+ * Сохранение списка постов в localStorage
+ * 
+ * @param posts - Массив постов для сохранения
+ */
 export function savePosts(posts: Post[]): void {
   localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
 }
 
+/**
+ * Получение настроек парсера
+ * 
+ * @returns {ParserSettings} Объект настроек
+ * @description
+ * Загружает настройки из localStorage. Если данных нет, возвращает настройки по умолчанию.
+ */
 export function getSettings(): ParserSettings {
   const stored = localStorage.getItem(SETTINGS_KEY);
   if (stored) {
@@ -154,10 +186,23 @@ export function getSettings(): ParserSettings {
   return defaultSettings;
 }
 
+/**
+ * Сохранение настроек парсера в localStorage
+ * 
+ * @param settings - Объект настроек для сохранения
+ */
 export function saveSettings(settings: ParserSettings): void {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
+/**
+ * Добавление нового канала
+ * 
+ * @param channel - Данные канала без id и addedAt
+ * @returns {Channel} Созданный канал с id и addedAt
+ * @description
+ * Создаёт новый канал с уникальным id и временной меткой, сохраняет в localStorage.
+ */
 export function addChannel(channel: Omit<Channel, 'id' | 'addedAt'>): Channel {
   const channels = getChannels();
   const newChannel: Channel = {
@@ -170,6 +215,13 @@ export function addChannel(channel: Omit<Channel, 'id' | 'addedAt'>): Channel {
   return newChannel;
 }
 
+/**
+ * Удаление канала и всех его постов
+ * 
+ * @param id - ID канала для удаления
+ * @description
+ * Удаляет канал из хранилища и все связанные с ним посты.
+ */
 export function removeChannel(id: string): void {
   const channels = getChannels().filter(ch => ch.id !== id);
   saveChannels(channels);
@@ -177,6 +229,13 @@ export function removeChannel(id: string): void {
   savePosts(posts);
 }
 
+/**
+ * Переключение активности канала
+ * 
+ * @param id - ID канала
+ * @description
+ * Включает или выключает канал для парсинга.
+ */
 export function toggleChannel(id: string): void {
   const channels = getChannels().map(ch => 
     ch.id === id ? { ...ch, isActive: !ch.isActive } : ch
@@ -184,6 +243,14 @@ export function toggleChannel(id: string): void {
   saveChannels(channels);
 }
 
+/**
+ * Обновление статуса поста
+ * 
+ * @param id - ID поста
+ * @param status - Новый статус (new, approved, published, rejected)
+ * @description
+ * Изменяет статус поста и сохраняет изменения в localStorage.
+ */
 export function updatePostStatus(id: string, status: Post['status']): void {
   const posts = getPosts().map(p => 
     p.id === id ? { ...p, status } : p
@@ -191,6 +258,14 @@ export function updatePostStatus(id: string, status: Post['status']): void {
   savePosts(posts);
 }
 
+/**
+ * Массовое обновление статусов постов
+ * 
+ * @param ids - Массив ID постов для обновления
+ * @param status - Новый статус для всех указанных постов
+ * @description
+ * Обновляет статус нескольких постов одновременно.
+ */
 export function bulkUpdateStatus(ids: string[], status: Post['status']): void {
   const posts = getPosts().map(p => 
     ids.includes(p.id) ? { ...p, status } : p
@@ -198,6 +273,14 @@ export function bulkUpdateStatus(ids: string[], status: Post['status']): void {
   savePosts(posts);
 }
 
+/**
+ * Симуляция процесса парсинга
+ * 
+ * @returns {Post[]} Массив новых постов
+ * @description
+ * Генерирует новые посты для всех активных каналов.
+ * Используется для демонстрации и тестирования.
+ */
 export function simulateParsing(): Post[] {
   const channels = getChannels().filter(ch => ch.isActive);
   const posts = getPosts();
@@ -249,6 +332,12 @@ export function simulateParsing(): Post[] {
   return newPosts;
 }
 
+/**
+ * Сброс всех данных
+ * 
+ * @description
+ * Удаляет все данные из localStorage (каналы, посты, настройки).
+ */
 export function resetData(): void {
   localStorage.removeItem(CHANNELS_KEY);
   localStorage.removeItem(POSTS_KEY);

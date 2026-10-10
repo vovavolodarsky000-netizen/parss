@@ -2,11 +2,22 @@ import React, { useState, useCallback } from 'react';
 import { ParserSettings, AVAILABLE_TOPICS } from '../types';
 
 interface Props {
+  /** Текущие настройки парсера */
   settings: ParserSettings;
+  /** Функция сохранения настроек */
   onSave: (settings: ParserSettings) => void;
+  /** Функция сброса всех данных */
   onReset: () => void;
 }
 
+/**
+ * Компонент настроек
+ * 
+ * @description
+ * Предоставляет интерфейс для настройки парсера: API credentials,
+ * параметры парсинга, фильтры по тематикам и ключевым словам,
+ * экспорт и сброс данных. Мемоизирован для оптимизации производительности.
+ */
 const Settings = React.memo(function Settings({ settings, onSave, onReset }: Props) {
   const [local, setLocal] = useState<ParserSettings>({ ...settings });
   const [newKeyword, setNewKeyword] = useState('');

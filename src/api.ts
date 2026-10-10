@@ -11,7 +11,7 @@ interface ApiResponse<T> {
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
   };
 }
 
@@ -204,7 +204,7 @@ export const channelsApi = {
     });
   },
 
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: Record<string, unknown>) => {
     return apiFetch(`/channels/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),

@@ -2,12 +2,25 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Channel, AVAILABLE_TOPICS } from '../types';
 
 interface Props {
+  /** Список каналов для отображения */
   channels: Channel[];
+  /** Функция добавления нового канала */
   onAdd: (channel: Omit<Channel, 'id' | 'addedAt'>) => void;
+  /** Функция удаления канала */
   onRemove: (id: string) => void;
+  /** Функция переключения активности канала */
   onToggle: (id: string) => void;
 }
 
+/**
+ * Компонент списка каналов
+ * 
+ * @description
+ * Отображает список Telegram каналов с фильтрацией по категориям и тематикам.
+ * Позволяет добавлять, удалять и переключать активность каналов.
+ * Поддерживает выбор тематик и ключевых слов для каждого канала.
+ * Мемоизирован для оптимизации производительности.
+ */
 const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemove, onToggle }: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState('');

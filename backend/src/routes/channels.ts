@@ -416,10 +416,11 @@ router.post(
           newPosts: newPosts.length,
         },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
       logger.error('Ошибка парсинга канала', {
         channelId: channel.id,
-        error: error.message,
+        error: errorMessage,
       });
 
       res.status(500).json({

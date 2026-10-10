@@ -2,11 +2,23 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Post } from '../types';
 
 interface Props {
+  /** Список постов для публикации */
   posts: Post[];
+  /** Функция обновления статуса поста */
   onUpdateStatus: (id: string, status: Post['status']) => void;
+  /** Функция массового обновления статусов */
   onBulkUpdate: (ids: string[], status: Post['status']) => void;
 }
 
+/**
+ * Компонент очереди публикации
+ * 
+ * @description
+ * Отображает очередь одобренных постов для публикации. Позволяет
+ * выбирать посты, указывать целевой канал и запускать процесс публикации.
+ * Включает лог публикации и историю опубликованных постов.
+ * Мемоизирован для оптимизации производительности.
+ */
 const PublishQueue = React.memo(function PublishQueue({ posts, onUpdateStatus, onBulkUpdate }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [publishTarget, setPublishTarget] = useState('');

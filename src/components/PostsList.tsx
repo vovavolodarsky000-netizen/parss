@@ -2,12 +2,24 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { Post } from '../types';
 
 interface Props {
+  /** Список постов для отображения */
   posts: Post[];
+  /** Список каналов с тематиками и ключевыми словами */
   channels?: Array<{ id: string; title: string; topics: string[]; keywords: string[] }>;
+  /** Функция обновления статуса поста */
   onUpdateStatus: (id: string, status: Post['status']) => void;
+  /** Функция массового обновления статусов */
   onBulkUpdate: (ids: string[], status: Post['status']) => void;
 }
 
+/**
+ * Компонент списка постов
+ * 
+ * @description
+ * Отображает список постов из каналов и веб-сайтов с фильтрацией по статусу,
+ * каналу и тематике. Поддерживает массовые операции и переключение между
+ * списковым и сеточным видами. Мемоизирован для оптимизации производительности.
+ */
 const PostsList = React.memo(function PostsList({ posts, channels: allChannels = [], onUpdateStatus, onBulkUpdate }: Props) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');

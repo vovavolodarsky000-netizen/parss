@@ -73,9 +73,10 @@ class WebParserService {
 
       logger.info('Страница успешно спарсена', { url, articlesCount: articles.length });
       return articles;
-    } catch (error: any) {
-      logger.error('Ошибка парсинга страницы', { url, error: error.message });
-      throw new ParsingError(`Не удалось спарсить страницу ${url}: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      logger.error('Ошибка парсинга страницы', { url, error: errorMessage });
+      throw new ParsingError(`Не удалось спарсить страницу ${url}: ${errorMessage}`);
     }
   }
 

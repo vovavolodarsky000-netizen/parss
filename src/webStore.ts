@@ -171,12 +171,20 @@ function generateMockWebPosts(sites: WebSite[]): WebPost[] {
   return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
+/**
+ * Получение списка всех веб-сайтов
+ * 
+ * @returns {WebSite[]} Массив веб-сайтов
+ * @description
+ * Загружает сайты из localStorage. Если данных нет, создаёт моковые данные.
+ * Гарантирует наличие полей topics, keywords и parseRules для обратной совместимости.
+ */
 export function getWebSites(): WebSite[] {
   const stored = localStorage.getItem(SITES_KEY);
   if (stored) {
     const sites = JSON.parse(stored);
     // Гарантируем наличие полей topics и keywords для обратной совместимости
-    return sites.map((s: any) => ({
+    return sites.map((s: WebSite) => ({
       ...s,
       topics: s.topics || [],
       keywords: s.keywords || [],
@@ -188,10 +196,22 @@ export function getWebSites(): WebSite[] {
   return mock;
 }
 
+/**
+ * Сохранение списка веб-сайтов в localStorage
+ * 
+ * @param sites - Массив сайтов для сохранения
+ */
 export function saveWebSites(sites: WebSite[]): void {
   localStorage.setItem(SITES_KEY, JSON.stringify(sites));
 }
 
+/**
+ * Получение списка всех постов с веб-сайтов
+ * 
+ * @returns {WebPost[]} Массив постов
+ * @description
+ * Загружает посты из localStorage. Если данных нет, создаёт моковые данные.
+ */
 export function getWebPosts(): WebPost[] {
   const stored = localStorage.getItem(WEB_POSTS_KEY);
   if (stored) {
@@ -203,10 +223,23 @@ export function getWebPosts(): WebPost[] {
   return mock;
 }
 
+/**
+ * Сохранение списка постов с веб-сайтов в localStorage
+ * 
+ * @param posts - Массив постов для сохранения
+ */
 export function saveWebPosts(posts: WebPost[]): void {
   localStorage.setItem(WEB_POSTS_KEY, JSON.stringify(posts));
 }
 
+/**
+ * Добавление нового веб-сайта
+ * 
+ * @param site - Данные сайта без id и addedAt
+ * @returns {WebSite} Созданный сайт с id и addedAt
+ * @description
+ * Создаёт новый сайт с уникальным id и временной меткой, сохраняет в localStorage.
+ */
 export function addWebSite(site: Omit<WebSite, 'id' | 'addedAt'>): WebSite {
   const sites = getWebSites();
   const newSite: WebSite = {
@@ -219,6 +252,13 @@ export function addWebSite(site: Omit<WebSite, 'id' | 'addedAt'>): WebSite {
   return newSite;
 }
 
+/**
+ * Удаление веб-сайта и всех его постов
+ * 
+ * @param id - ID сайта для удаления
+ * @description
+ * Удаляет сайт из хранилища и все связанные с ним посты.
+ */
 export function removeWebSite(id: string): void {
   const sites = getWebSites().filter(s => s.id !== id);
   saveWebSites(sites);
@@ -226,34 +266,72 @@ export function removeWebSite(id: string): void {
   saveWebPosts(posts);
 }
 
+/**
+ * Переключение активности веб-сайта
+ * 
+ * @param id - ID сайта
+ * @description
+ * Включает или выключает сайт для парсинга.
+ */
 export function toggleWebSite(id: string): void {
-  const sites = getWebSites().map(s =>
+  const sites = getWebSites().map(s => 
     s.id === id ? { ...s, isActive: !s.isActive } : s
   );
   saveWebSites(sites);
 }
 
+/**
+ * Обновление данных веб-сайта
+ * 
+ * @param id - ID сайта
+ * @param updates - Объект с обновляемыми полями
+ * @description
+ * Обновляет указанные поля сайта и сохраняет изменения.
+ */
 export function updateWebSite(id: string, updates: Partial<WebSite>): void {
-  const sites = getWebSites().map(s =>
+  const sites = getWebSites().map(s => 
     s.id === id ? { ...s, ...updates } : s
   );
   saveWebSites(sites);
 }
 
+/**
+ * Обновление статуса поста с веб-сайта
+ * 
+ * @param id - ID поста
+ * @param status - Новый статус (new, approved, published, rejected)
+ * @description
+ * Изменяет статус поста и сохраняет изменения в localStorage.
+ */
 export function updateWebPostStatus(id: string, status: WebPost['status']): void {
-  const posts = getWebPosts().map(p =>
+  const posts = getWebPosts().map(p => 
     p.id === id ? { ...p, status } : p
   );
   saveWebPosts(posts);
 }
 
+/**
+ * Массовое обновление статусов постов с веб-сайтов
+ * 
+ * @param ids - Массив ID постов для обновления
+ * @param status - Новый статус для всех указанных постов
+ * @description
+ * Обновляет статус нескольких постов одновременно.
+ */
 export function bulkUpdateWebPostStatus(ids: string[], status: WebPost['status']): void {
-  const posts = getWebPosts().map(p =>
+  const posts = getWebPosts().map(p => 
     ids.includes(p.id) ? { ...p, status } : p
   );
   saveWebPosts(posts);
 }
-
+/**
+ * Симуляция процесса парсинга веб-сайтов
+ * 
+ * @returns {WebPost[]} Массив новых постов
+ * @description
+ * Генерирует новые посты для всех активных веб-сайтов.
+ * Используется для демонстрации и тестирования.
+ */
 export function simulateWebParsing(): WebPost[] {
   const sites = getWebSites().filter(s => s.isActive);
   const posts = getWebPosts();

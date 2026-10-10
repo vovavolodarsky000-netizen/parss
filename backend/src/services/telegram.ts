@@ -105,9 +105,10 @@ class TelegramService {
       logger.info('Успешная авторизация в Telegram', { phone });
 
       return sessionString;
-    } catch (error: any) {
-      logger.error('Ошибка авторизации в Telegram', { error: error.message });
-      throw new TelegramApiError(`Ошибка авторизации: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      logger.error('Ошибка авторизации в Telegram', { error: errorMessage });
+      throw new TelegramApiError(`Ошибка авторизации: ${errorMessage}`);
     }
   }
 
@@ -137,8 +138,9 @@ class TelegramService {
 
       logger.info('Получена информация о канале', { username, title: channel.title });
       return channel;
-    } catch (error: any) {
-      logger.error('Ошибка получения информации о канале', { username, error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      logger.error('Ошибка получения информации о канале', { username, error: errorMessage });
       throw new TelegramApiError(`Не удалось получить информацию о канале @${username}`);
     }
   }
@@ -210,8 +212,9 @@ class TelegramService {
       });
 
       return parsedMessages;
-    } catch (error: any) {
-      logger.error('Ошибка парсинга канала', { username, error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      logger.error('Ошибка парсинга канала', { username, error: errorMessage });
       throw new TelegramApiError(`Не удалось получить сообщения из канала @${username}`);
     }
   }
@@ -238,8 +241,9 @@ class TelegramService {
       await this.client.sendMessage(entity, { message: text });
 
       logger.info('Сообщение отправлено в канал', { username });
-    } catch (error: any) {
-      logger.error('Ошибка отправки сообщения', { username, error: error.message });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Неизвестная ошибка';
+      logger.error('Ошибка отправки сообщения', { username, error: errorMessage });
       throw new TelegramApiError(`Не удалось отправить сообщение в канал @${username}`);
     }
   }

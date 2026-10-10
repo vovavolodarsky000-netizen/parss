@@ -1,11 +1,46 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
+/**
+ * Сообщение WebSocket
+ */
 export interface WebSocketMessage {
+  /** Тип сообщения */
   type: string;
-  payload: any;
+  /** Данные сообщения */
+  payload: Record<string, unknown>;
+  /** Временная метка */
   timestamp: string;
 }
 
+/**
+ * Хук для работы с WebSocket соединениями
+ * 
+ * @description
+ * Управляет WebSocket соединением с автоматическим переподключением.
+ * Поддерживает аутентификацию и подписку на каналы.
+ * 
+ * @param url - URL WebSocket сервера
+ * @returns {Object} Объект с методами и состоянием WebSocket
+ * @returns {boolean} isConnected - Статус подключения
+ * @returns {WebSocketMessage|null} lastMessage - Последнее полученное сообщение
+ * @returns {Function} sendMessage - Функция отправки сообщения
+ * @returns {Function} disconnect - Функция отключения
+ * 
+ * @example
+ * ```tsx
+ * const { isConnected, sendMessage, lastMessage } = useWebSocket('ws://localhost:8080');
+ * 
+ * // Отправка сообщения
+ * sendMessage('new_post', { id: '123', text: 'Hello' });
+ * 
+ * // Обработка входящих сообщений
+ * useEffect(() => {
+ *   if (lastMessage) {
+ *     console.log('Получено:', lastMessage);
+ *   }
+ * }, [lastMessage]);
+ * ```
+ */
 export function useWebSocket(url: string) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
@@ -65,7 +100,7 @@ export function useWebSocket(url: string) {
     }
   }, []);
 
-  const sendMessage = useCallback((type: string, payload: any) => {
+  const sendMessage = useCallback((type: string, payload: Record<string, unknown>) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({ type, payload, timestamp: new Date().toISOString() }));
     }

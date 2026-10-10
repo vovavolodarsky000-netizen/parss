@@ -2,13 +2,26 @@ import React, { useMemo } from 'react';
 import { DashboardStats, Post, Channel, WebSite } from '../types';
 
 interface Props {
+  /** Статистика дашборда */
   stats: DashboardStats;
+  /** Последние посты для отображения */
   recentPosts: Post[];
+  /** Список каналов */
   channels: Channel[];
+  /** Список веб-сайтов */
   sites?: WebSite[];
+  /** Функция навигации между вкладками */
   onNavigate: (tab: string) => void;
 }
 
+/**
+ * Компонент дашборда
+ * 
+ * @description
+ * Отображает общую статистику, последние посты, топ каналов и веб-сайтов.
+ * Включает распределение по тематикам и график активности.
+ * Мемоизирован для оптимизации производительности.
+ */
 const Dashboard = React.memo(function Dashboard({ stats, recentPosts, channels, sites = [], onNavigate }: Props) {
   const statCards = [
     { label: 'Всего каналов', value: stats.totalChannels, icon: 'fa-broadcast-tower', color: 'from-blue-500 to-blue-600' },

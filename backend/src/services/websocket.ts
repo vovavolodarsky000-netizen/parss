@@ -106,7 +106,7 @@ class WebSocketService {
   /**
    * Отправка сообщения конкретному клиенту
    */
-  private sendToClient(clientId: string, message: any): void {
+  private sendToClient(clientId: string, message: WebSocketMessage): void {
     const client = this.clients.get(clientId);
     if (client && client.ws.readyState === WebSocket.OPEN) {
       client.ws.send(JSON.stringify(message));

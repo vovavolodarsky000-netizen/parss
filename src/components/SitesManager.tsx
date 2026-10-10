@@ -2,15 +2,30 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { WebSite, ParseRule, AVAILABLE_TOPICS } from '../types';
 
 interface Props {
+  /** Список веб-сайтов для отображения */
   sites: WebSite[];
+  /** Функция добавления нового сайта */
   onAdd: (site: Omit<WebSite, 'id' | 'addedAt'>) => void;
+  /** Функция удаления сайта */
   onRemove: (id: string) => void;
+  /** Функция переключения активности сайта */
   onToggle: (id: string) => void;
+  /** Функция обновления данных сайта */
   onUpdate: (id: string, updates: Partial<WebSite>) => void;
+  /** Функция запуска парсинга */
   onParse?: () => void;
+  /** Флаг активного парсинга */
   isParsing?: boolean;
 }
 
+/**
+ * Компонент управления веб-сайтами
+ * 
+ * @description
+ * Отображает список веб-сайтов для парсинга с фильтрацией по тематикам.
+ * Позволяет добавлять, удалять, переключать активность и настраивать
+ * правила парсинга для каждого сайта. Мемоизирован для оптимизации производительности.
+ */
 const SitesManager = React.memo(function SitesManager({ sites, onAdd, onRemove, onToggle, onUpdate, onParse, isParsing }: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);

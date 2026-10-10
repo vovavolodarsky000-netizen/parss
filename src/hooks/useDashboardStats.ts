@@ -1,12 +1,33 @@
 import { useMemo } from 'react';
 import { Channel, Post, WebSite, WebPost, DashboardStats } from '../types';
 
+/**
+ * Хук для расчёта статистики дашборда
+ * 
+ * @description
+ * Вычисляет агрегированную статистику по каналам, постам и сайтам.
+ * Использует useMemo для оптимизации производительности.
+ * 
+ * @param channels - Массив Telegram каналов
+ * @param posts - Массив постов из каналов
+ * @param sites - Массив веб-сайтов
+ * @param webPosts - Массив постов с веб-сайтов
+ * @returns {DashboardStats} Объект со статистикой
+ * 
+ * @example
+ * ```tsx
+ * const stats = useDashboardStats(channels, posts, sites, webPosts);
+ * 
+ * console.log(stats.totalChannels); // 10
+ * console.log(stats.newPosts); // 5
+ * ```
+ */
 export function useDashboardStats(
   channels: Channel[],
   posts: Post[],
   sites: WebSite[],
   webPosts: WebPost[]
-) {
+): DashboardStats {
   const stats = useMemo<DashboardStats>(() => {
     const allPosts = [...posts, ...webPosts];
 
