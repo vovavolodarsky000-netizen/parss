@@ -29,13 +29,15 @@ export default function SitesManager({ sites, onAdd, onRemove, onToggle, onUpdat
   });
   const [newKeyword, setNewKeyword] = useState('');
 
-  const allTopics = [...new Set(sites.flatMap(s => s.topics))];
+  const allTopics = [...new Set(sites.flatMap(s => s.topics || []))];
 
   const filtered = sites.filter(s => {
+    const topics = s.topics || [];
+    const keywords = s.keywords || [];
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
       s.url.toLowerCase().includes(search.toLowerCase()) ||
-      s.keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
-    const matchesTopic = filterTopic === 'all' || s.topics.includes(filterTopic);
+      keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
+    const matchesTopic = filterTopic === 'all' || topics.includes(filterTopic);
     return matchesSearch && matchesTopic;
   });
 
@@ -185,14 +187,14 @@ export default function SitesManager({ sites, onAdd, onRemove, onToggle, onUpdat
               </div>
 
               {/* Topics */}
-              {site.topics.length > 0 && (
+              {(site.topics?.length ?? 0) > 0 && (
                 <div className="mb-3">
                   <div className="flex items-center gap-1 mb-1.5">
                     <i className="fas fa-layer-group text-xs text-purple-500"></i>
                     <span className="text-xs font-medium text-gray-500">Тематики</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {site.topics.map(topic => (
+                    {(site.topics || []).map(topic => (
                       <span key={topic} className="inline-flex items-center px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
                         {topic}
                       </span>
@@ -202,20 +204,20 @@ export default function SitesManager({ sites, onAdd, onRemove, onToggle, onUpdat
               )}
 
               {/* Keywords */}
-              {site.keywords.length > 0 && (
+              {(site.keywords?.length ?? 0) > 0 && (
                 <div className="mb-3">
                   <div className="flex items-center gap-1 mb-1.5">
                     <i className="fas fa-key text-xs text-amber-500"></i>
                     <span className="text-xs font-medium text-gray-500">Ключевые слова</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {site.keywords.slice(0, 4).map(keyword => (
+                    {(site.keywords || []).slice(0, 4).map(keyword => (
                       <span key={keyword} className="inline-flex items-center px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
                         {keyword}
                       </span>
                     ))}
-                    {site.keywords.length > 4 && (
-                      <span className="text-xs text-gray-400">+{site.keywords.length - 4}</span>
+                    {(site.keywords?.length ?? 0) > 4 && (
+                      <span className="text-xs text-gray-400">+{(site.keywords?.length ?? 0) - 4}</span>
                     )}
                   </div>
                 </div>

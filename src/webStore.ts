@@ -174,7 +174,14 @@ function generateMockWebPosts(sites: WebSite[]): WebPost[] {
 export function getWebSites(): WebSite[] {
   const stored = localStorage.getItem(SITES_KEY);
   if (stored) {
-    return JSON.parse(stored);
+    const sites = JSON.parse(stored);
+    // Гарантируем наличие полей topics и keywords для обратной совместимости
+    return sites.map((s: any) => ({
+      ...s,
+      topics: s.topics || [],
+      keywords: s.keywords || [],
+      parseRules: s.parseRules || [],
+    }));
   }
   const mock = generateMockSites();
   localStorage.setItem(SITES_KEY, JSON.stringify(mock));

@@ -113,7 +113,13 @@ function generateMockPosts(channels: Channel[]): Post[] {
 export function getChannels(): Channel[] {
   const stored = localStorage.getItem(CHANNELS_KEY);
   if (stored) {
-    return JSON.parse(stored);
+    const channels = JSON.parse(stored);
+    // Гарантируем наличие полей topics и keywords для обратной совместимости
+    return channels.map((ch: any) => ({
+      ...ch,
+      topics: ch.topics || [],
+      keywords: ch.keywords || [],
+    }));
   }
   const mock = generateMockChannels();
   localStorage.setItem(CHANNELS_KEY, JSON.stringify(mock));

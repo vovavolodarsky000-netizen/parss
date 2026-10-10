@@ -146,9 +146,9 @@ export default function Dashboard({ stats, recentPosts, channels, sites = [], on
                   </div>
                   <div className={`w-2.5 h-2.5 rounded-full ${channel.isActive ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 </div>
-                {channel.topics.length > 0 && (
+                {(channel.topics?.length ?? 0) > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2 ml-9">
-                    {channel.topics.slice(0, 3).map(topic => (
+                    {(channel.topics || []).slice(0, 3).map(topic => (
                       <span key={topic} className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded-full">{topic}</span>
                     ))}
                   </div>
@@ -168,7 +168,7 @@ export default function Dashboard({ stats, recentPosts, channels, sites = [], on
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {(() => {
             const topicCounts: Record<string, number> = {};
-            channels.forEach(ch => ch.topics.forEach(t => { topicCounts[t] = (topicCounts[t] || 0) + 1; }));
+            channels.forEach(ch => (ch.topics || []).forEach(t => { topicCounts[t] = (topicCounts[t] || 0) + 1; }));
             return Object.entries(topicCounts)
               .sort((a, b) => b[1] - a[1])
               .slice(0, 10)

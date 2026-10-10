@@ -18,7 +18,7 @@ export default function PostsList({ posts, channels: allChannels = [], onUpdateS
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
 
   const channels = [...new Set(posts.map(p => p.channelTitle))];
-  const allTopics = [...new Set(allChannels.flatMap(ch => ch.topics))];
+  const allTopics = [...new Set(allChannels.flatMap(ch => ch.topics || []))];
 
   // Map channel title to channel data
   const getChannelData = (channelTitle: string) => {
@@ -32,7 +32,7 @@ export default function PostsList({ posts, channels: allChannels = [], onUpdateS
     const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
     const matchesChannel = filterChannel === 'all' || p.channelTitle === filterChannel;
     const channelData = getChannelData(p.channelTitle);
-    const matchesTopic = filterTopic === 'all' || (channelData && channelData.topics.includes(filterTopic));
+    const matchesTopic = filterTopic === 'all' || (channelData && (channelData.topics || []).includes(filterTopic));
     return matchesSearch && matchesStatus && matchesChannel && matchesTopic;
   });
 
@@ -221,8 +221,8 @@ export default function PostsList({ posts, channels: allChannels = [], onUpdateS
                       )}
                       {(() => {
                         const chData = getChannelData(post.channelTitle);
-                        if (chData && chData.topics.length > 0) {
-                          return chData.topics.slice(0, 2).map(t => (
+                        if (chData && (chData.topics?.length ?? 0) > 0) {
+                          return (chData.topics || []).slice(0, 2).map(t => (
                             <span key={t} className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600">{t}</span>
                           ));
                         }

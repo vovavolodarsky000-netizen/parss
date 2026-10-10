@@ -25,14 +25,16 @@ export default function ChannelsList({ channels, onAdd, onRemove, onToggle }: Pr
   const [newKeyword, setNewKeyword] = useState('');
 
   const categories = [...new Set(channels.map(ch => ch.category))];
-  const allTopics = [...new Set(channels.flatMap(ch => ch.topics))];
+  const allTopics = [...new Set(channels.flatMap(ch => ch.topics || []))];
   
   const filtered = channels.filter(ch => {
+    const topics = ch.topics || [];
+    const keywords = ch.keywords || [];
     const matchesSearch = ch.title.toLowerCase().includes(search.toLowerCase()) ||
       ch.username.toLowerCase().includes(search.toLowerCase()) ||
-      ch.keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
+      keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
     const matchesCategory = filterCategory === 'all' || ch.category === filterCategory;
-    const matchesTopic = filterTopic === 'all' || ch.topics.includes(filterTopic);
+    const matchesTopic = filterTopic === 'all' || topics.includes(filterTopic);
     return matchesSearch && matchesCategory && matchesTopic;
   });
 
@@ -153,14 +155,14 @@ export default function ChannelsList({ channels, onAdd, onRemove, onToggle }: Pr
               </div>
 
               {/* Topics */}
-              {channel.topics.length > 0 && (
+              {(channel.topics?.length ?? 0) > 0 && (
                 <div className="mt-3">
                   <div className="flex items-center gap-1 mb-1.5">
                     <i className="fas fa-layer-group text-xs text-purple-500"></i>
                     <span className="text-xs font-medium text-gray-500">Тематики</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {channel.topics.map(topic => (
+                    {(channel.topics || []).map(topic => (
                       <span key={topic} className="inline-flex items-center px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
                         {topic}
                       </span>
@@ -170,27 +172,27 @@ export default function ChannelsList({ channels, onAdd, onRemove, onToggle }: Pr
               )}
 
               {/* Keywords */}
-              {channel.keywords.length > 0 && (
+              {(channel.keywords?.length ?? 0) > 0 && (
                 <div className="mt-3">
                   <div className="flex items-center gap-1 mb-1.5">
                     <i className="fas fa-key text-xs text-amber-500"></i>
                     <span className="text-xs font-medium text-gray-500">Ключевые слова</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {channel.keywords.slice(0, expandedChannel === channel.id ? undefined : 5).map(keyword => (
+                    {(channel.keywords || []).slice(0, expandedChannel === channel.id ? undefined : 5).map(keyword => (
                       <span key={keyword} className="inline-flex items-center px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-xs font-medium">
                         {keyword}
                       </span>
                     ))}
-                    {channel.keywords.length > 5 && expandedChannel !== channel.id && (
+                    {(channel.keywords?.length ?? 0) > 5 && expandedChannel !== channel.id && (
                       <button
                         onClick={() => setExpandedChannel(channel.id)}
                         className="text-xs text-blue-600 hover:text-blue-700 px-1"
                       >
-                        +{channel.keywords.length - 5} ещё
+                        +{(channel.keywords?.length ?? 0) - 5} ещё
                       </button>
                     )}
-                    {expandedChannel === channel.id && channel.keywords.length > 5 && (
+                    {expandedChannel === channel.id && (channel.keywords?.length ?? 0) > 5 && (
                       <button
                         onClick={() => setExpandedChannel(null)}
                         className="text-xs text-blue-600 hover:text-blue-700 px-1"
