@@ -64,7 +64,10 @@ class WebParserService {
               articles.push(article);
             }
           } catch (error) {
-            logger.warn('Ошибка извлечения статьи', { url, error });
+            logger.warn('Ошибка извлечения статьи', { 
+              url, 
+              error: error instanceof Error ? error.message : String(error) 
+            });
           }
         }
 

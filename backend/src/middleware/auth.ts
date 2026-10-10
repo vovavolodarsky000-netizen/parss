@@ -28,6 +28,7 @@ interface JwtPayload {
 
 /**
  * Middleware для проверки JWT токена
+ * SEC-002: Поддержка httpOnly cookies и Authorization header
  */
 export const authenticate = async (
   req: Request,
@@ -35,13 +36,19 @@ export const authenticate = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const authHeader = req.headers.authorization;
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('Токен авторизации не предоставлен');
+    // SEC-002: сначала проверяем cookies, потом Authorization header
+    let token = req.cookies?.access_token;
+    
+    if (!token) {
+      const authHeader = req.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
     }
 
-    const token = authHeader.substring(7);
+    if (!token) {
+      throw new UnauthorizedError('Токен авторизации не предоставлен');
+    }
 
     const decoded = jwt.verify(token, config.jwt.secret) as JwtPayload;
 

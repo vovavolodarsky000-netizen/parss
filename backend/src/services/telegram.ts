@@ -78,7 +78,9 @@ class TelegramService {
 
       logger.info('Telegram клиент инициализирован');
     } catch (error) {
-      logger.error('Ошибка инициализации Telegram клиента', { error });
+      logger.error('Ошибка инициализации Telegram клиента', { 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       throw new TelegramApiError('Не удалось инициализировать Telegram клиент');
     }
   }

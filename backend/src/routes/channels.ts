@@ -87,8 +87,8 @@ router.get(
       prisma.channel.count({ where }),
     ]);
 
-    // Дополнительная оптимизация: кэшируем результаты в памяти
-    // В production использовать Redis
+    // PERF-004: В production использовать Redis для кэширования
+    // См. backend/src/services/redis.ts
 
     res.json({
       success: true,

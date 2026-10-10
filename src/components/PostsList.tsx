@@ -72,12 +72,13 @@ const PostsList = React.memo(function PostsList({ posts, channels: allChannels =
   }, []);
 
   const selectAll = useCallback(() => {
-    if (selected.length === filtered.length) {
-      setSelected([]);
-    } else {
-      setSelected(filtered.map(p => p.id));
-    }
-  }, [selected.length, filtered]);
+    setSelected(prev => {
+      if (prev.length === filtered.length) {
+        return [];
+      }
+      return filtered.map(p => p.id);
+    });
+  }, [filtered]);
 
   const statusCounts = useMemo(() => ({
     all: posts.length,

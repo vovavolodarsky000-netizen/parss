@@ -1,9 +1,21 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { asyncHandler } from '../middleware/error.js';
 import { authenticate } from '../middleware/auth.js';
 import { NotFoundError, BadRequestError } from '../utils/errors.js';
 import logger from '../services/logger.js';
+
+// Схема валидации query-параметров (аналогично channels.ts)
+const postQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z.string().optional(),
+  channelId: z.string().optional(),
+  source: z.string().optional(),
+  search: z.string().optional(),
+  topic: z.string().optional(),
+});
 
 const router = Router();
 
@@ -16,18 +28,12 @@ router.use(authenticate);
 router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
-    const {
-      page = '1',
-      limit = '20',
-      status,
-      channelId,
-      source,
-      search,
-      topic,
-    } = req.query;
+    // Валидация query-параметров
+    const query = postQuerySchema.parse(req.query);
+    const { page, limit, status, channelId, source, search } = query;
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    const take = parseInt(limit as string);
+    const skip = (page - 1) * limit;
+    const take = limit;
 
     const where: {
       userId: string;

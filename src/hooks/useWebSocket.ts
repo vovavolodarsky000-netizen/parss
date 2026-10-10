@@ -82,8 +82,8 @@ export function useWebSocket(url: string) {
         }
       };
 
-      ws.current.onerror = (error) => {
-        console.error('[WebSocket] Error:', error);
+      ws.current.onerror = (event) => {
+        console.error('[WebSocket] Error:', event);
       };
     } catch (error) {
       console.error('[WebSocket] Connection error:', error);

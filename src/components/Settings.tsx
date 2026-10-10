@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { ParserSettings, AVAILABLE_TOPICS } from '../types';
 
 interface Props {
@@ -23,23 +23,40 @@ const Settings = React.memo(function Settings({ settings, onSave, onReset }: Pro
   const [newKeyword, setNewKeyword] = useState('');
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [saved, setSaved] = useState(false);
+  const savedTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const handleSave = () => {
+  // Очистка таймера при размонтировании
+  useEffect(() => {
+    return () => {
+      if (savedTimeoutRef.current) {
+        clearTimeout(savedTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleSave = useCallback(() => {
     onSave(local);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+    if (savedTimeoutRef.current) {
+      clearTimeout(savedTimeoutRef.current);
+    }
+    savedTimeoutRef.current = setTimeout(() => setSaved(false), 2000);
+  }, [local, onSave]);
 
-  const addKeyword = () => {
-    if (newKeyword.trim() && !local.filterKeywords.includes(newKeyword.trim())) {
-      setLocal({ ...local, filterKeywords: [...local.filterKeywords, newKeyword.trim()] });
+  const addKeyword = useCallback(() => {
+    const kw = newKeyword.trim();
+    if (kw && !local.filterKeywords.includes(kw)) {
+      setLocal(prev => ({ ...prev, filterKeywords: [...prev.filterKeywords, kw] }));
       setNewKeyword('');
     }
-  };
+  }, [newKeyword, local.filterKeywords]);
 
-  const removeKeyword = (keyword: string) => {
-    setLocal({ ...local, filterKeywords: local.filterKeywords.filter(k => k !== keyword) });
-  };
+  const removeKeyword = useCallback((keyword: string) => {
+    setLocal(prev => ({ 
+      ...prev, 
+      filterKeywords: prev.filterKeywords.filter(k => k !== keyword) 
+    }));
+  }, []);
 
   return (
     <div className="space-y-6">

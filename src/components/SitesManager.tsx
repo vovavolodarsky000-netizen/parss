@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { WebSite, ParseRule, AVAILABLE_TOPICS } from '../types';
+import { useDebounce } from '../hooks/useDebounce';
 
 interface Props {
   /** Список веб-сайтов для отображения */
@@ -31,6 +32,7 @@ const SitesManager = React.memo(function SitesManager({ sites, onAdd, onRemove, 
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [editingSite, setEditingSite] = useState<WebSite | null>(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300); // PERF: debounce поиска
   const [filterTopic, setFilterTopic] = useState('all');
 
   const [newSite, setNewSite] = useState({
@@ -50,42 +52,45 @@ const SitesManager = React.memo(function SitesManager({ sites, onAdd, onRemove, 
     return sites.filter(s => {
       const topics = s.topics || [];
       const keywords = s.keywords || [];
-      const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.url.toLowerCase().includes(search.toLowerCase()) ||
-        keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
+      const matchesSearch = s.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        s.url.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        keywords.some(k => k.toLowerCase().includes(debouncedSearch.toLowerCase()));
       const matchesTopic = filterTopic === 'all' || topics.includes(filterTopic);
       return matchesSearch && matchesTopic;
     });
-  }, [sites, search, filterTopic]);
+  }, [sites, debouncedSearch, filterTopic]);
 
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     if (!newSite.name || !newSite.url) return;
     onAdd(newSite);
     setNewSite({ name: '', url: '', topics: [], keywords: [], parseRules: [], isActive: true, lastParsed: null });
     setNewKeyword('');
     setShowAddModal(false);
-  };
+  }, [newSite, onAdd]);
 
-  const addKeyword = () => {
+  const addKeyword = useCallback(() => {
     const kw = newKeyword.trim();
     if (kw && !newSite.keywords.includes(kw)) {
-      setNewSite({ ...newSite, keywords: [...newSite.keywords, kw] });
+      setNewSite(prev => ({ ...prev, keywords: [...prev.keywords, kw] }));
       setNewKeyword('');
     }
-  };
+  }, [newKeyword, newSite.keywords]);
 
-  const removeKeyword = (keyword: string) => {
-    setNewSite({ ...newSite, keywords: newSite.keywords.filter(k => k !== keyword) });
-  };
+  const removeKeyword = useCallback((keyword: string) => {
+    setNewSite(prev => ({ 
+      ...prev, 
+      keywords: prev.keywords.filter(k => k !== keyword) 
+    }));
+  }, []);
 
-  const toggleTopic = (topic: string) => {
+  const toggleTopic = useCallback((topic: string) => {
     setNewSite(prev => ({
       ...prev,
       topics: prev.topics.includes(topic)
         ? prev.topics.filter(t => t !== topic)
         : [...prev.topics, topic],
     }));
-  };
+  }, []);
 
   const openRulesModal = (site: WebSite) => {
     setEditingSite(site);

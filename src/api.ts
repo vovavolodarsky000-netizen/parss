@@ -29,10 +29,6 @@ interface User {
 }
 
 // SEC-002: токены теперь хранятся в httpOnly cookies, не в localStorage
-// Эти переменные используются только для отслеживания состояния
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
-
 // CSRF токен (SEC-003, BUG-003: сохраняем в sessionStorage)
 let csrfToken: string | null = sessionStorage.getItem('csrf_token');
 
@@ -86,10 +82,7 @@ async function apiFetch<T>(
     ...options.headers,
   };
 
-  if (accessToken) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
-  }
-
+  // SEC-002: токены передаются через httpOnly cookies автоматически
   // Добавляем CSRF токен в заголовок (SEC-003)
   if (csrfToken && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
@@ -128,16 +121,8 @@ async function apiFetch<T>(
       }
     }
 
-    // Если токен истёк, пробуем обновить
-    if (response.status === 401 && refreshToken) {
-      const refreshed = await refreshAccessToken();
-      if (refreshed) {
-        // Повторяем запрос с новым токеном
-        (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
-        const retryResponse = await fetch(url, { ...options, headers });
-        return retryResponse.json();
-      }
-    }
+    // SEC-002: при 401 ошибке пользователь будет перенаправлен на страницу логина
+    // через механизм httpOnly cookies
 
     return data;
   } catch (error) {
@@ -152,49 +137,8 @@ async function apiFetch<T>(
   }
 }
 
-/**
- * Обновление access токена
- */
-async function refreshAccessToken(): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-
-    const data = await response.json();
-
-    if (data.success && data.data?.tokens) {
-      setTokens(data.data.tokens.accessToken, data.data.tokens.refreshToken);
-      return true;
-    }
-
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Установка токенов
- */
-function setTokens(access: string, refresh: string) {
-  accessToken = access;
-  refreshToken = refresh;
-  localStorage.setItem('access_token', access);
-  localStorage.setItem('refresh_token', refresh);
-}
-
-/**
- * Очистка токенов
- */
-function clearTokens() {
-  accessToken = null;
-  refreshToken = null;
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('refresh_token');
-}
+// SEC-002: токены управляются через httpOnly cookies на стороне сервера
+// Функции refreshAccessToken, setTokens и clearTokens удалены
 
 // ============================================
 // Auth API
@@ -202,39 +146,26 @@ function clearTokens() {
 
 export const authApi = {
   register: async (email: string, username: string, password: string) => {
-    const response = await apiFetch<{ user: User; tokens: AuthTokens }>('/auth/register', {
+    // SEC-002: токены устанавливаются сервером в httpOnly cookies
+    return apiFetch<{ user: User }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, username, password }),
     });
-
-    if (response.success && response.data?.tokens) {
-      setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
-    }
-
-    return response;
   },
 
   login: async (email: string, password: string) => {
-    const response = await apiFetch<{ user: User; tokens: AuthTokens }>('/auth/login', {
+    // SEC-002: токены устанавливаются сервером в httpOnly cookies
+    return apiFetch<{ user: User }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-
-    if (response.success && response.data?.tokens) {
-      setTokens(response.data.tokens.accessToken, response.data.tokens.refreshToken);
-    }
-
-    return response;
   },
 
   logout: async () => {
-    const response = await apiFetch('/auth/logout', {
+    // SEC-002: cookies очищаются сервером
+    return apiFetch('/auth/logout', {
       method: 'POST',
-      body: JSON.stringify({ refreshToken }),
     });
-
-    clearTokens();
-    return response;
   },
 
   me: async () => {
@@ -335,10 +266,20 @@ export const postsApi = {
 // Утилиты
 // ============================================
 
+// SEC-002: проверка аутентификации через cookies
 export const apiUtils = {
-  isAuthenticated: () => !!accessToken,
-  getToken: () => accessToken,
-  clearAuth: clearTokens,
+  isAuthenticated: async () => {
+    try {
+      const response = await apiFetch<User>('/auth/me');
+      return response.success;
+    } catch {
+      return false;
+    }
+  },
+  clearAuth: async () => {
+    // SEC-002: cookies очищаются сервером при logout
+    await apiFetch('/auth/logout', { method: 'POST' });
+  },
 };
 
 export default {

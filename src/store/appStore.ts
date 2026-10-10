@@ -46,7 +46,8 @@ interface AppState {
 
   // Действия
   loadData: () => void;
-  handleParse: () => void;
+  handleParse: () => NodeJS.Timeout | undefined;
+  cancelParse: (timeoutId: NodeJS.Timeout) => void;
   handleAddChannel: (channel: Omit<Channel, 'id' | 'addedAt'>) => void;
   handleRemoveChannel: (id: string) => void;
   handleToggleChannel: (id: string) => void;
@@ -79,16 +80,19 @@ export const useAppStore = create<AppState>((set, get) => ({
   // Загрузка данных с обработкой ошибок (PERF-001: один set() вместо двух)
   loadData: () => {
     try {
+      const channels = getChannels();
+      const posts = getPosts();
+      const sites = getWebSites();
+      const webPosts = getWebPosts();
+      
       set({
-        isLoading: true,
+        isLoading: false,
         error: null,
-        channels: getChannels(),
-        posts: getPosts(),
-        sites: getWebSites(),
-        webPosts: getWebPosts(),
+        channels,
+        posts,
+        sites,
+        webPosts,
       });
-      // Устанавливаем isLoading в false после загрузки данных
-      set({ isLoading: false });
     } catch (error) {
       console.error('[Store] Ошибка загрузки данных:', error);
       set({

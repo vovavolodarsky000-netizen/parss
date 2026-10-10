@@ -28,19 +28,20 @@ const PublishQueue = React.memo(function PublishQueue({ posts, onUpdateStatus, o
   const approvedPosts = useMemo(() => posts.filter(p => p.status === 'approved'), [posts]);
   const publishedPosts = useMemo(() => posts.filter(p => p.status === 'published'), [posts]);
 
-  const toggleSelect = (id: string) => {
+  const toggleSelect = useCallback((id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
+  }, []);
 
-  const selectAll = () => {
-    if (selected.length === approvedPosts.length) {
-      setSelected([]);
-    } else {
-      setSelected(approvedPosts.map(p => p.id));
-    }
-  };
+  const selectAll = useCallback(() => {
+    setSelected(prev => {
+      if (prev.length === approvedPosts.length) {
+        return [];
+      }
+      return approvedPosts.map(p => p.id);
+    });
+  }, [approvedPosts]);
 
-  const handlePublish = () => {
+  const handlePublish = useCallback(() => {
     if (selected.length === 0) return;
     setPublishing(true);
     
@@ -69,7 +70,7 @@ const PublishQueue = React.memo(function PublishQueue({ posts, onUpdateStatus, o
         }, ...prev]);
       }
     }, 500);
-  };
+  }, [selected, approvedPosts, onUpdateStatus]);
 
   return (
     <div className="space-y-6">

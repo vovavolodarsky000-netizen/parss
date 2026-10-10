@@ -92,8 +92,11 @@ const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemov
   }, [newKeyword, newChannel.keywords]);
 
   const removeKeyword = useCallback((keyword: string) => {
-    setNewChannel({ ...newChannel, keywords: newChannel.keywords.filter(k => k !== keyword) });
-  }, [newChannel.keywords]);
+    setNewChannel(prev => ({
+      ...prev,
+      keywords: prev.keywords.filter(k => k !== keyword)
+    }));
+  }, []);
 
   const toggleTopic = useCallback((topic: string) => {
     setNewChannel(prev => ({

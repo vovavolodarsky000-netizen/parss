@@ -55,7 +55,10 @@ class RedisService {
       }
       return null;
     } catch (error) {
-      logger.error('Redis: ошибка получения значения', { key, error });
+      logger.error('Redis: ошибка получения значения', { 
+        key, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return null;
     }
   }
@@ -77,7 +80,10 @@ class RedisService {
       }
       return true;
     } catch (error) {
-      logger.error('Redis: ошибка установки значения', { key, error });
+      logger.error('Redis: ошибка установки значения', { 
+        key, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   }
@@ -94,7 +100,10 @@ class RedisService {
       await this.client.del(key);
       return true;
     } catch (error) {
-      logger.error('Redis: ошибка удаления значения', { key, error });
+      logger.error('Redis: ошибка удаления значения', { 
+        key, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   }
