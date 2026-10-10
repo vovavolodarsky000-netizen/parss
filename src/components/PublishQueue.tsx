@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Post } from '../types';
 
 interface Props {
@@ -7,14 +7,14 @@ interface Props {
   onBulkUpdate: (ids: string[], status: Post['status']) => void;
 }
 
-export default function PublishQueue({ posts, onUpdateStatus, onBulkUpdate }: Props) {
+const PublishQueue = React.memo(function PublishQueue({ posts, onUpdateStatus, onBulkUpdate }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
   const [publishTarget, setPublishTarget] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [publishLog, setPublishLog] = useState<Array<{ time: string; message: string; type: 'success' | 'error' | 'info' }>>([]);
 
-  const approvedPosts = posts.filter(p => p.status === 'approved');
-  const publishedPosts = posts.filter(p => p.status === 'published');
+  const approvedPosts = useMemo(() => posts.filter(p => p.status === 'approved'), [posts]);
+  const publishedPosts = useMemo(() => posts.filter(p => p.status === 'published'), [posts]);
 
   const toggleSelect = (id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -239,4 +239,6 @@ export default function PublishQueue({ posts, onUpdateStatus, onBulkUpdate }: Pr
       </div>
     </div>
   );
-}
+});
+
+export default PublishQueue;

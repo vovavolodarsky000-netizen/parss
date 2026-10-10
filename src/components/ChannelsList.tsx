@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Channel, AVAILABLE_TOPICS } from '../types';
 
 interface Props {
@@ -8,7 +8,7 @@ interface Props {
   onToggle: (id: string) => void;
 }
 
-export default function ChannelsList({ channels, onAdd, onRemove, onToggle }: Props) {
+const ChannelsList = React.memo(function ChannelsList({ channels, onAdd, onRemove, onToggle }: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
@@ -24,19 +24,21 @@ export default function ChannelsList({ channels, onAdd, onRemove, onToggle }: Pr
   });
   const [newKeyword, setNewKeyword] = useState('');
 
-  const categories = [...new Set(channels.map(ch => ch.category))];
-  const allTopics = [...new Set(channels.flatMap(ch => ch.topics || []))];
+  const categories = useMemo(() => [...new Set(channels.map(ch => ch.category))], [channels]);
+  const allTopics = useMemo(() => [...new Set(channels.flatMap(ch => ch.topics || []))], [channels]);
   
-  const filtered = channels.filter(ch => {
-    const topics = ch.topics || [];
-    const keywords = ch.keywords || [];
-    const matchesSearch = ch.title.toLowerCase().includes(search.toLowerCase()) ||
-      ch.username.toLowerCase().includes(search.toLowerCase()) ||
-      keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
-    const matchesCategory = filterCategory === 'all' || ch.category === filterCategory;
-    const matchesTopic = filterTopic === 'all' || topics.includes(filterTopic);
-    return matchesSearch && matchesCategory && matchesTopic;
-  });
+  const filtered = useMemo(() => {
+    return channels.filter(ch => {
+      const topics = ch.topics || [];
+      const keywords = ch.keywords || [];
+      const matchesSearch = ch.title.toLowerCase().includes(search.toLowerCase()) ||
+        ch.username.toLowerCase().includes(search.toLowerCase()) ||
+        keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
+      const matchesCategory = filterCategory === 'all' || ch.category === filterCategory;
+      const matchesTopic = filterTopic === 'all' || topics.includes(filterTopic);
+      return matchesSearch && matchesCategory && matchesTopic;
+    });
+  }, [channels, search, filterCategory, filterTopic]);
 
   const handleAdd = () => {
     if (!newChannel.username || !newChannel.title) return;
@@ -413,4 +415,6 @@ export default function ChannelsList({ channels, onAdd, onRemove, onToggle }: Pr
       )}
     </div>
   );
-}
+});
+
+export default ChannelsList;

@@ -53,11 +53,10 @@ class WebParserService {
           continue;
         }
 
-        // Получаем ссылки на статьи
-        const links = rule.linkSelector
-          ? $(rule.linkSelector).toArray().slice(0, rule.maxItems)
-          : [$('body')[0]].filter(Boolean);
-
+      // Получаем ссылки на статьи
+      const links: cheerio.Element[] = rule.linkSelector
+        ? $(rule.linkSelector).toArray().slice(0, rule.maxItems)
+        : [$('body')[0]].filter(Boolean);
         for (const link of links) {
           try {
             const article = await this.extractArticle($, link, rule, url);
@@ -85,7 +84,7 @@ class WebParserService {
    */
   private async extractArticle(
     $: cheerio.CheerioAPI,
-    element: any,
+    element: cheerio.Element,
     rule: ParseRule,
     baseUrl: string
   ): Promise<WebArticle | null> {

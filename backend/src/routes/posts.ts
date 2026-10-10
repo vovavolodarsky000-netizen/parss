@@ -29,7 +29,13 @@ router.get(
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const take = parseInt(limit as string);
 
-    const where: any = { userId: req.user!.id };
+    const where: {
+      userId: string;
+      status?: string;
+      channelId?: string;
+      source?: string;
+      text?: { contains: string; mode: 'insensitive' };
+    } = { userId: req.user!.id };
 
     if (status) {
       where.status = status;

@@ -1,13 +1,26 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import { TabType } from './types';
 import { useAppData } from './hooks/useAppData';
 import { useDashboardStats } from './hooks/useDashboardStats';
-import Dashboard from './components/Dashboard';
-import ChannelsList from './components/ChannelsList';
-import PostsList from './components/PostsList';
-import Settings from './components/Settings';
-import PublishQueue from './components/PublishQueue';
-import SitesManager from './components/SitesManager';
+import { ErrorBoundary, AsyncErrorBoundary } from './components/ErrorBoundary';
+
+// Lazy loading компонентов для оптимизации размера бандла
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const ChannelsList = lazy(() => import('./components/ChannelsList'));
+const PostsList = lazy(() => import('./components/PostsList'));
+const Settings = lazy(() => import('./components/Settings'));
+const PublishQueue = lazy(() => import('./components/PublishQueue'));
+const SitesManager = lazy(() => import('./components/SitesManager'));
+
+// Fallback UI для lazy loading
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="text-center">
+      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <p className="mt-4 text-gray-600">Загрузка...</p>
+    </div>
+  </div>
+);
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -50,12 +63,159 @@ export default function App() {
     { key: 'settings', label: 'Настройки', icon: 'fa-cog' },
   ];
 
+  // Рендер активного компонента с lazy loading
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <Dashboard
+            stats={stats}
+            recentPosts={[
+              ...posts.map(p => ({ ...p, source: 'telegram' as const })),
+              ...webPosts.map(wp => ({
+                id: wp.id,
+                channelId: wp.siteId,
+                channelTitle: wp.siteName,
+                channelUsername: new URL(wp.siteUrl).hostname,
+                text: `${wp.title}\n\n${wp.content}`,
+                mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
+                mediaUrl: wp.imageUrl,
+                views: Math.floor(Math.random() * 10000),
+                date: wp.date,
+                parsedAt: wp.parsedAt,
+                status: wp.status,
+                hashtags: wp.keywords.map(k => `#${k}`),
+                hasMedia: !!wp.imageUrl,
+                source: 'web' as const,
+              })),
+            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())}
+            channels={channels}
+            sites={sites}
+            onNavigate={(tab) => setActiveTab(tab as TabType)}
+          />
+        );
+      case 'channels':
+        return (
+          <ChannelsList
+            channels={channels}
+            onAdd={handleAddChannel}
+            onRemove={handleRemoveChannel}
+            onToggle={handleToggleChannel}
+          />
+        );
+      case 'sites':
+        return (
+          <SitesManager
+            sites={sites}
+            onAdd={handleAddSite}
+            onRemove={handleRemoveSite}
+            onToggle={handleToggleSite}
+            onUpdate={handleUpdateSite}
+            onParse={handleParse}
+            isParsing={isParsing}
+          />
+        );
+      case 'posts':
+        return (
+          <PostsList
+            posts={[
+              ...posts.map(p => ({ ...p, source: 'telegram' as const })),
+              ...webPosts.map(wp => ({
+                id: wp.id,
+                channelId: wp.siteId,
+                channelTitle: wp.siteName,
+                channelUsername: new URL(wp.siteUrl).hostname,
+                text: `${wp.title}\n\n${wp.content}`,
+                mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
+                mediaUrl: wp.imageUrl,
+                views: Math.floor(Math.random() * 10000),
+                date: wp.date,
+                parsedAt: wp.parsedAt,
+                status: wp.status,
+                hashtags: wp.keywords.map(k => `#${k}`),
+                hasMedia: !!wp.imageUrl,
+                source: 'web' as const,
+              })),
+            ]}
+            channels={[
+              ...channels.map(ch => ({ id: ch.id, title: ch.title, topics: ch.topics, keywords: ch.keywords })),
+              ...sites.map(s => ({ id: s.id, title: s.name, topics: s.topics, keywords: s.keywords })),
+            ]}
+            onUpdateStatus={(id, status) => {
+              const isWebPost = webPosts.some(wp => wp.id === id);
+              if (isWebPost) {
+                handleUpdateWebPostStatus(id, status);
+              } else {
+                handleUpdatePostStatus(id, status);
+              }
+            }}
+            onBulkUpdate={(ids, status) => {
+              const webPostIds = ids.filter(id => webPosts.some(wp => wp.id === id));
+              const telegramPostIds = ids.filter(id => posts.some(p => p.id === id));
+              if (webPostIds.length > 0) handleBulkUpdateWebPosts(webPostIds, status);
+              if (telegramPostIds.length > 0) handleBulkUpdate(telegramPostIds, status);
+            }}
+          />
+        );
+      case 'publish':
+        return (
+          <PublishQueue
+            posts={[
+              ...posts,
+              ...webPosts.map(wp => ({
+                id: wp.id,
+                channelId: wp.siteId,
+                channelTitle: wp.siteName,
+                channelUsername: new URL(wp.siteUrl).hostname,
+                text: `${wp.title}\n\n${wp.content}`,
+                mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
+                mediaUrl: wp.imageUrl,
+                views: Math.floor(Math.random() * 10000),
+                date: wp.date,
+                parsedAt: wp.parsedAt,
+                status: wp.status,
+                hashtags: wp.keywords.map(k => `#${k}`),
+                hasMedia: !!wp.imageUrl,
+              })),
+            ]}
+            onUpdateStatus={(id, status) => {
+              const isWebPost = webPosts.some(wp => wp.id === id);
+              if (isWebPost) {
+                handleUpdateWebPostStatus(id, status);
+              } else {
+                handleUpdatePostStatus(id, status);
+              }
+            }}
+            onBulkUpdate={(ids, status) => {
+              const webPostIds = ids.filter(id => webPosts.some(wp => wp.id === id));
+              const telegramPostIds = ids.filter(id => posts.some(p => p.id === id));
+              if (webPostIds.length > 0) handleBulkUpdateWebPosts(webPostIds, status);
+              if (telegramPostIds.length > 0) handleBulkUpdate(telegramPostIds, status);
+            }}
+          />
+        );
+      case 'settings':
+        return (
+          <Settings
+            settings={settings}
+            onSave={handleSaveSettings}
+            onReset={handleReset}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
+    <AsyncErrorBoundary>
+      <ErrorBoundary>
+        <Suspense fallback={<LoadingFallback />}>
+          <div className="min-h-screen bg-gray-50 flex">
+            {/* Sidebar */}
+            <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 lg:translate-x-0 lg:static lg:z-auto ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}>
         <div className="p-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl flex items-center justify-center">
@@ -163,138 +323,12 @@ export default function App() {
 
         {/* Content */}
         <div className="p-4 lg:p-8">
-          {activeTab === 'dashboard' && (
-            <Dashboard
-              stats={stats}
-              recentPosts={[
-                ...posts.map(p => ({ ...p, source: 'telegram' as const })),
-                ...webPosts.map(wp => ({
-                  id: wp.id,
-                  channelId: wp.siteId,
-                  channelTitle: wp.siteName,
-                  channelUsername: new URL(wp.siteUrl).hostname,
-                  text: `${wp.title}\n\n${wp.content}`,
-                  mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
-                  mediaUrl: wp.imageUrl,
-                  views: Math.floor(Math.random() * 10000),
-                  date: wp.date,
-                  parsedAt: wp.parsedAt,
-                  status: wp.status,
-                  hashtags: wp.keywords.map(k => `#${k}`),
-                  hasMedia: !!wp.imageUrl,
-                  source: 'web' as const,
-                })),
-              ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())}
-              channels={channels}
-              sites={sites}
-              onNavigate={(tab) => setActiveTab(tab as TabType)}
-            />
-          )}
-          {activeTab === 'channels' && (
-            <ChannelsList
-              channels={channels}
-              onAdd={handleAddChannel}
-              onRemove={handleRemoveChannel}
-              onToggle={handleToggleChannel}
-            />
-          )}
-          {activeTab === 'sites' && (
-            <SitesManager
-              sites={sites}
-              onAdd={handleAddSite}
-              onRemove={handleRemoveSite}
-              onToggle={handleToggleSite}
-              onUpdate={handleUpdateSite}
-              onParse={handleParse}
-              isParsing={isParsing}
-            />
-          )}
-          {activeTab === 'posts' && (
-            <PostsList
-              posts={[
-                ...posts.map(p => ({ ...p, source: 'telegram' as const })),
-                ...webPosts.map(wp => ({
-                  id: wp.id,
-                  channelId: wp.siteId,
-                  channelTitle: wp.siteName,
-                  channelUsername: new URL(wp.siteUrl).hostname,
-                  text: `${wp.title}\n\n${wp.content}`,
-                  mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
-                  mediaUrl: wp.imageUrl,
-                  views: Math.floor(Math.random() * 10000),
-                  date: wp.date,
-                  parsedAt: wp.parsedAt,
-                  status: wp.status,
-                  hashtags: wp.keywords.map(k => `#${k}`),
-                  hasMedia: !!wp.imageUrl,
-                  source: 'web' as const,
-                })),
-              ]}
-              channels={[
-                ...channels.map(ch => ({ id: ch.id, title: ch.title, topics: ch.topics, keywords: ch.keywords })),
-                ...sites.map(s => ({ id: s.id, title: s.name, topics: s.topics, keywords: s.keywords })),
-              ]}
-              onUpdateStatus={(id, status) => {
-                const isWebPost = webPosts.some(wp => wp.id === id);
-                if (isWebPost) {
-                  handleUpdateWebPostStatus(id, status);
-                } else {
-                  handleUpdatePostStatus(id, status);
-                }
-              }}
-              onBulkUpdate={(ids, status) => {
-                const webPostIds = ids.filter(id => webPosts.some(wp => wp.id === id));
-                const telegramPostIds = ids.filter(id => posts.some(p => p.id === id));
-                if (webPostIds.length > 0) handleBulkUpdateWebPosts(webPostIds, status);
-                if (telegramPostIds.length > 0) handleBulkUpdate(telegramPostIds, status);
-              }}
-            />
-          )}
-          {activeTab === 'publish' && (
-            <PublishQueue
-              posts={[
-                ...posts,
-                ...webPosts.map(wp => ({
-                  id: wp.id,
-                  channelId: wp.siteId,
-                  channelTitle: wp.siteName,
-                  channelUsername: new URL(wp.siteUrl).hostname,
-                  text: `${wp.title}\n\n${wp.content}`,
-                  mediaType: wp.imageUrl ? 'photo' as const : 'text' as const,
-                  mediaUrl: wp.imageUrl,
-                  views: Math.floor(Math.random() * 10000),
-                  date: wp.date,
-                  parsedAt: wp.parsedAt,
-                  status: wp.status,
-                  hashtags: wp.keywords.map(k => `#${k}`),
-                  hasMedia: !!wp.imageUrl,
-                })),
-              ]}
-              onUpdateStatus={(id, status) => {
-                const isWebPost = webPosts.some(wp => wp.id === id);
-                if (isWebPost) {
-                  handleUpdateWebPostStatus(id, status);
-                } else {
-                  handleUpdatePostStatus(id, status);
-                }
-              }}
-              onBulkUpdate={(ids, status) => {
-                const webPostIds = ids.filter(id => webPosts.some(wp => wp.id === id));
-                const telegramPostIds = ids.filter(id => posts.some(p => p.id === id));
-                if (webPostIds.length > 0) handleBulkUpdateWebPosts(webPostIds, status);
-                if (telegramPostIds.length > 0) handleBulkUpdate(telegramPostIds, status);
-              }}
-            />
-          )}
-          {activeTab === 'settings' && (
-            <Settings
-              settings={settings}
-              onSave={handleSaveSettings}
-              onReset={handleReset}
-            />
-          )}
+          {renderContent()}
         </div>
       </main>
     </div>
+        </Suspense>
+      </ErrorBoundary>
+    </AsyncErrorBoundary>
   );
 }

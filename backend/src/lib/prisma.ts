@@ -14,11 +14,18 @@ export const prisma =
     ],
   });
 
+interface PrismaLogEvent {
+  query: string;
+  params: string;
+  duration: number;
+  message?: string;
+}
+
 // Логирование запросов в development
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 
-  prisma.$on('query' as never, (e: any) => {
+  prisma.$on('query' as never, (e: PrismaLogEvent) => {
     logger.debug('Query', {
       query: e.query,
       params: e.params,
@@ -26,11 +33,11 @@ if (process.env.NODE_ENV !== 'production') {
     });
   });
 
-  prisma.$on('error' as never, (e: any) => {
+  prisma.$on('error' as never, (e: PrismaLogEvent) => {
     logger.error('Prisma error', { message: e.message });
   });
 
-  prisma.$on('warn' as never, (e: any) => {
+  prisma.$on('warn' as never, (e: PrismaLogEvent) => {
     logger.warn('Prisma warning', { message: e.message });
   });
 }

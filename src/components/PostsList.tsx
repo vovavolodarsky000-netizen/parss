@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Post } from '../types';
 
 interface Props {
@@ -8,7 +8,7 @@ interface Props {
   onBulkUpdate: (ids: string[], status: Post['status']) => void;
 }
 
-export default function PostsList({ posts, channels: allChannels = [], onUpdateStatus, onBulkUpdate }: Props) {
+const PostsList = React.memo(function PostsList({ posts, channels: allChannels = [], onUpdateStatus, onBulkUpdate }: Props) {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterChannel, setFilterChannel] = useState<string>('all');
@@ -17,24 +17,26 @@ export default function PostsList({ posts, channels: allChannels = [], onUpdateS
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [expandedPost, setExpandedPost] = useState<string | null>(null);
 
-  const channels = [...new Set(posts.map(p => p.channelTitle))];
-  const allTopics = [...new Set(allChannels.flatMap(ch => ch.topics || []))];
+  const channels = useMemo(() => [...new Set(posts.map(p => p.channelTitle))], [posts]);
+  const allTopics = useMemo(() => [...new Set(allChannels.flatMap(ch => ch.topics || []))], [allChannels]);
 
   // Map channel title to channel data
-  const getChannelData = (channelTitle: string) => {
+  const getChannelData = useCallback((channelTitle: string) => {
     return allChannels.find(ch => ch.title === channelTitle);
-  };
+  }, [allChannels]);
 
-  const filtered = posts.filter(p => {
-    const matchesSearch = p.text.toLowerCase().includes(search.toLowerCase()) ||
-      p.channelTitle.toLowerCase().includes(search.toLowerCase()) ||
-      p.hashtags.some(h => h.toLowerCase().includes(search.toLowerCase()));
-    const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
-    const matchesChannel = filterChannel === 'all' || p.channelTitle === filterChannel;
-    const channelData = getChannelData(p.channelTitle);
-    const matchesTopic = filterTopic === 'all' || (channelData && (channelData.topics || []).includes(filterTopic));
-    return matchesSearch && matchesStatus && matchesChannel && matchesTopic;
-  });
+  const filtered = useMemo(() => {
+    return posts.filter(p => {
+      const matchesSearch = p.text.toLowerCase().includes(search.toLowerCase()) ||
+        p.channelTitle.toLowerCase().includes(search.toLowerCase()) ||
+        p.hashtags.some(h => h.toLowerCase().includes(search.toLowerCase()));
+      const matchesStatus = filterStatus === 'all' || p.status === filterStatus;
+      const matchesChannel = filterChannel === 'all' || p.channelTitle === filterChannel;
+      const channelData = getChannelData(p.channelTitle);
+      const matchesTopic = filterTopic === 'all' || (channelData && (channelData.topics || []).includes(filterTopic));
+      return matchesSearch && matchesStatus && matchesChannel && matchesTopic;
+    });
+  }, [posts, search, filterStatus, filterChannel, filterTopic, getChannelData]);
 
   const toggleSelect = (id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -350,4 +352,6 @@ export default function PostsList({ posts, channels: allChannels = [], onUpdateS
       )}
     </div>
   );
-}
+});
+
+export default PostsList;

@@ -5,6 +5,29 @@ import logger from './logger.js';
 import { TelegramApiError } from '../utils/errors.js';
 import { config } from '../config.js';
 
+interface TelegramEntity {
+  id: number;
+  className?: string;
+  username?: string;
+  title?: string;
+  participantsCount?: number;
+}
+
+interface TelegramMedia {
+  className: string;
+  document?: {
+    attributes?: Array<{ className: string }>;
+  };
+}
+
+interface TelegramMessage {
+  id: number;
+  message?: string;
+  date: number;
+  views?: number;
+  media?: TelegramMedia;
+}
+
 export interface TelegramMessage {
   id: number;
   text: string;
@@ -73,12 +96,12 @@ class TelegramService {
         phoneNumber: phone,
         phoneCode: phoneCodeHandler,
         password: undefined,
-        onError: (err) => {
+        onError: (err: Error) => {
           logger.error('Ошибка Telegram авторизации', { error: err.message });
         },
       });
 
-      const sessionString = (this.session as any).save();
+      const sessionString = (this.session as StringSession).save();
       logger.info('Успешная авторизация в Telegram', { phone });
 
       return sessionString;
@@ -103,11 +126,13 @@ class TelegramService {
         throw new TelegramApiError(`Канал @${username} не найден`);
       }
 
+      const telegramEntity = entity as TelegramEntity;
+
       const channel: TelegramChannel = {
-        id: entity.id.toString(),
-        username: 'username' in entity ? (entity as any).username || username : username,
-        title: 'title' in entity ? (entity as any).title : username,
-        subscribers: 'participantsCount' in entity ? (entity as any).participantsCount || 0 : 0,
+        id: telegramEntity.id.toString(),
+        username: telegramEntity.username || username,
+        title: telegramEntity.title || username,
+        subscribers: telegramEntity.participantsCount || 0,
       };
 
       logger.info('Получена информация о канале', { username, title: channel.title });
@@ -142,10 +167,11 @@ class TelegramService {
         offsetDate: offsetDate ? Math.floor(offsetDate.getTime() / 1000) : undefined,
       });
 
-      const channelTitle = 'title' in entity ? (entity as any).title : username;
-      const channelUsername = 'username' in entity ? (entity as any).username || username : username;
+      const telegramEntity = entity as TelegramEntity;
+      const channelTitle = telegramEntity.title || username;
+      const channelUsername = telegramEntity.username || username;
 
-      const parsedMessages: TelegramMessage[] = messages.map((msg: any) => {
+      const parsedMessages: TelegramMessage[] = messages.map((msg: TelegramMessage) => {
         let mediaType: 'text' | 'photo' | 'video' | 'document' = 'text';
         let mediaUrl: string | undefined;
         let hasMedia = false;
@@ -156,7 +182,7 @@ class TelegramService {
             mediaType = 'photo';
           } else if (msg.media.className === 'MessageMediaDocument') {
             const document = msg.media.document;
-            if (document?.attributes?.some((attr: any) => attr.className === 'DocumentAttributeVideo')) {
+            if (document?.attributes?.some((attr: { className: string }) => attr.className === 'DocumentAttributeVideo')) {
               mediaType = 'video';
             } else {
               mediaType = 'document';

@@ -7,6 +7,20 @@ interface Client {
   userId?: string;
 }
 
+interface WebSocketMessage {
+  type: string;
+  payload: Record<string, unknown>;
+  timestamp?: string;
+}
+
+interface AuthPayload {
+  userId: string;
+}
+
+interface SubscribePayload {
+  channel: string;
+}
+
 class WebSocketService {
   private wss: WebSocketServer | null = null;
   private clients: Map<string, Client> = new Map();
@@ -24,9 +38,9 @@ class WebSocketService {
       this.clients.set(clientId, client);
       logger.info('WebSocket клиент подключён', { clientId, totalClients: this.clients.size });
 
-      ws.on('message', (data) => {
+      ws.on('message', (data: Buffer | string) => {
         try {
-          const message = JSON.parse(data.toString());
+          const message: WebSocketMessage = JSON.parse(data.toString());
           this.handleMessage(clientId, message);
         } catch (error) {
           logger.error('Ошибка обработки WebSocket сообщения', { error });
@@ -38,7 +52,7 @@ class WebSocketService {
         logger.info('WebSocket клиент отключён', { clientId, totalClients: this.clients.size });
       });
 
-      ws.on('error', (error) => {
+      ws.on('error', (error: Error) => {
         logger.error('WebSocket ошибка', { clientId, error: error.message });
       });
 
@@ -56,15 +70,15 @@ class WebSocketService {
   /**
    * Обработка входящих сообщений
    */
-  private handleMessage(clientId: string, message: any): void {
+  private handleMessage(clientId: string, message: WebSocketMessage): void {
     const { type, payload } = message;
 
     switch (type) {
       case 'authenticate':
-        this.authenticateClient(clientId, payload);
+        this.authenticateClient(clientId, payload as unknown as AuthPayload);
         break;
       case 'subscribe':
-        this.subscribeClient(clientId, payload);
+        this.subscribeClient(clientId, payload as unknown as SubscribePayload);
         break;
       default:
         logger.warn('Неизвестный тип сообщения', { clientId, type });
@@ -74,7 +88,7 @@ class WebSocketService {
   /**
    * Аутентификация клиента
    */
-  private authenticateClient(clientId: string, payload: { userId: string }): void {
+  private authenticateClient(clientId: string, payload: AuthPayload): void {
     const client = this.clients.get(clientId);
     if (client) {
       client.userId = payload.userId;
@@ -85,7 +99,7 @@ class WebSocketService {
   /**
    * Подписка клиента на события
    */
-  private subscribeClient(clientId: string, payload: { channel: string }): void {
+  private subscribeClient(clientId: string, payload: SubscribePayload): void {
     logger.info('Клиент подписан на канал', { clientId, channel: payload.channel });
   }
 
@@ -102,7 +116,7 @@ class WebSocketService {
   /**
    * Broadcast сообщение всем подключённым клиентам
    */
-  broadcast(message: any, userId?: string): void {
+  broadcast(message: WebSocketMessage, userId?: string): void {
     this.clients.forEach((client, clientId) => {
       if (!userId || client.userId === userId) {
         this.sendToClient(clientId, message);
@@ -113,7 +127,7 @@ class WebSocketService {
   /**
    * Уведомление о новом посте
    */
-  notifyNewPost(post: any, userId?: string): void {
+  notifyNewPost(post: Record<string, unknown>, userId?: string): void {
     this.broadcast(
       {
         type: 'new_post',
@@ -127,7 +141,7 @@ class WebSocketService {
   /**
    * Уведомление о завершении парсинга
    */
-  notifyParseComplete(result: any, userId?: string): void {
+  notifyParseComplete(result: Record<string, unknown>, userId?: string): void {
     this.broadcast(
       {
         type: 'parse_complete',

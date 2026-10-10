@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { WebSite, ParseRule, AVAILABLE_TOPICS } from '../types';
 
 interface Props {
@@ -11,7 +11,7 @@ interface Props {
   isParsing?: boolean;
 }
 
-export default function SitesManager({ sites, onAdd, onRemove, onToggle, onUpdate, onParse, isParsing }: Props) {
+const SitesManager = React.memo(function SitesManager({ sites, onAdd, onRemove, onToggle, onUpdate, onParse, isParsing }: Props) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [editingSite, setEditingSite] = useState<WebSite | null>(null);
@@ -29,17 +29,19 @@ export default function SitesManager({ sites, onAdd, onRemove, onToggle, onUpdat
   });
   const [newKeyword, setNewKeyword] = useState('');
 
-  const allTopics = [...new Set(sites.flatMap(s => s.topics || []))];
+  const allTopics = useMemo(() => [...new Set(sites.flatMap(s => s.topics || []))], [sites]);
 
-  const filtered = sites.filter(s => {
-    const topics = s.topics || [];
-    const keywords = s.keywords || [];
-    const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.url.toLowerCase().includes(search.toLowerCase()) ||
-      keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
-    const matchesTopic = filterTopic === 'all' || topics.includes(filterTopic);
-    return matchesSearch && matchesTopic;
-  });
+  const filtered = useMemo(() => {
+    return sites.filter(s => {
+      const topics = s.topics || [];
+      const keywords = s.keywords || [];
+      const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
+        s.url.toLowerCase().includes(search.toLowerCase()) ||
+        keywords.some(k => k.toLowerCase().includes(search.toLowerCase()));
+      const matchesTopic = filterTopic === 'all' || topics.includes(filterTopic);
+      return matchesSearch && matchesTopic;
+    });
+  }, [sites, search, filterTopic]);
 
   const handleAdd = () => {
     if (!newSite.name || !newSite.url) return;
@@ -533,4 +535,6 @@ export default function SitesManager({ sites, onAdd, onRemove, onToggle, onUpdat
       )}
     </div>
   );
-}
+});
+
+export default SitesManager;

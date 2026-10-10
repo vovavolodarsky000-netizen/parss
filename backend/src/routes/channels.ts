@@ -33,7 +33,12 @@ router.get(
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const take = parseInt(limit as string);
 
-    const where: any = { userId: req.user!.id };
+    const where: {
+      userId: string;
+      isActive?: boolean;
+      category?: string;
+      topics?: { some: { topic: { name: string } } };
+    } = { userId: req.user!.id };
 
     if (isActive !== undefined) {
       where.isActive = isActive === 'true';

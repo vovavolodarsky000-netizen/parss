@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ParserSettings, AVAILABLE_TOPICS } from '../types';
 
 interface Props {
@@ -7,7 +7,7 @@ interface Props {
   onReset: () => void;
 }
 
-export default function Settings({ settings, onSave, onReset }: Props) {
+const Settings = React.memo(function Settings({ settings, onSave, onReset }: Props) {
   const [local, setLocal] = useState<ParserSettings>({ ...settings });
   const [newKeyword, setNewKeyword] = useState('');
   const [showConfirmReset, setShowConfirmReset] = useState(false);
@@ -313,4 +313,6 @@ export default function Settings({ settings, onSave, onReset }: Props) {
       )}
     </div>
   );
-}
+});
+
+export default Settings;
