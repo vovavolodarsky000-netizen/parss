@@ -76,11 +76,11 @@ function generateMockSites(): WebSite[] {
     name: site.name,
     url: site.url,
     isActive: i < 4,
-    lastParsed: i < 3 ? new Date(Date.now() - Math.random() * 86400000 * 3).toISOString() : null,
+    lastParsed: i < 3 ? new Date(Date.now() - (i * 86400000)).toISOString() : null,
     topics: site.topics,
     keywords: site.keywords,
     parseRules: generateMockRules().slice(0, i % 2 + 1),
-    addedAt: new Date(Date.now() - Math.random() * 2592000000).toISOString(),
+    addedAt: new Date(Date.now() - (i * 86400000 * 3)).toISOString(),
   }));
 }
 
@@ -146,9 +146,9 @@ function generateMockWebPosts(sites: WebSite[]): WebPost[] {
   for (let i = 0; i < 36; i++) {
     const site = activeSites[i % activeSites.length];
     const article = sampleArticles[i % sampleArticles.length];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const daysAgo = Math.floor(Math.random() * 14);
-    const date = new Date(Date.now() - daysAgo * 86400000 - Math.random() * 86400000);
+    const status = statuses[i % statuses.length];
+    const daysAgo = i % 14;
+    const date = new Date(Date.now() - daysAgo * 86400000 - (i * 3600000));
 
     posts.push({
       id: `web_post_${i + 1}`,
@@ -161,7 +161,7 @@ function generateMockWebPosts(sites: WebSite[]): WebPost[] {
       imageUrl: `https://picsum.photos/seed/web${i}/600/400`,
       author: article.author,
       date: date.toISOString(),
-      parsedAt: new Date(date.getTime() + Math.random() * 3600000).toISOString(),
+      parsedAt: new Date(date.getTime() + (i * 60000)).toISOString(),
       status,
       topics: site.topics,
       keywords: site.keywords.slice(0, 3),

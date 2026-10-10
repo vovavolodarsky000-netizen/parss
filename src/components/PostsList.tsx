@@ -78,13 +78,13 @@ const PostsList = React.memo(function PostsList({ posts, channels: allChannels =
     }
   };
 
-  const statusCounts = {
+  const statusCounts = useMemo(() => ({
     all: posts.length,
     new: posts.filter(p => p.status === 'new').length,
     approved: posts.filter(p => p.status === 'approved').length,
     published: posts.filter(p => p.status === 'published').length,
     rejected: posts.filter(p => p.status === 'rejected').length,
-  };
+  }), [posts]);
 
   return (
     <div className="space-y-6">

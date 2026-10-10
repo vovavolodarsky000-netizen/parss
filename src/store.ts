@@ -36,12 +36,12 @@ function generateMockChannels(): Channel[] {
     title: ch.title,
     subscribers: ch.subscribers,
     isActive: i < 6,
-    lastParsed: i < 4 ? new Date(Date.now() - Math.random() * 86400000).toISOString() : null,
+    lastParsed: i < 4 ? new Date(Date.now() - (i * 3600000)).toISOString() : null,
     avatar: `https://api.dicebear.com/4.0/identicon/${ch.username}.png?size=80`,
     category: ch.category,
     topics: ch.topics,
     keywords: ch.keywords,
-    addedAt: new Date(Date.now() - Math.random() * 2592000000).toISOString(),
+    addedAt: new Date(Date.now() - (i * 86400000)).toISOString(),
   }));
 }
 
@@ -85,10 +85,10 @@ function generateMockPosts(channels: Channel[]): Post[] {
   for (let i = 0; i < 48; i++) {
     const channel = activeChannels[i % activeChannels.length];
     const textIndex = i % sampleTexts.length;
-    const mediaType = mediaTypes[Math.floor(Math.random() * mediaTypes.length)];
-    const status = statuses[Math.floor(Math.random() * statuses.length)];
-    const daysAgo = Math.floor(Math.random() * 7);
-    const date = new Date(Date.now() - daysAgo * 86400000 - Math.random() * 86400000);
+    const mediaType = mediaTypes[i % mediaTypes.length];
+    const status = statuses[i % statuses.length];
+    const daysAgo = i % 7;
+    const date = new Date(Date.now() - daysAgo * 86400000 - (i * 3600000));
 
     posts.push({
       id: `post_${i + 1}`,
@@ -98,9 +98,9 @@ function generateMockPosts(channels: Channel[]): Post[] {
       text: sampleTexts[textIndex],
       mediaType,
       mediaUrl: mediaType !== 'text' ? `https://picsum.photos/seed/${i}/400/300` : undefined,
-      views: Math.floor(Math.random() * 50000) + 1000,
+      views: (i * 1000) + 1000,
       date: date.toISOString(),
-      parsedAt: new Date(date.getTime() + Math.random() * 3600000).toISOString(),
+      parsedAt: new Date(date.getTime() + (i * 60000)).toISOString(),
       status,
       hashtags: hashtagSets[textIndex],
       hasMedia: mediaType !== 'text',

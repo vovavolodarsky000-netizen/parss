@@ -66,7 +66,16 @@ async function apiFetch<T>(
   // Получаем CSRF токен для небезопасных методов (SEC-003)
   const method = (options.method || 'GET').toUpperCase();
   if (!['GET', 'HEAD', 'OPTIONS'].includes(method) && !csrfToken) {
-    await fetchCsrfToken();
+    const token = await fetchCsrfToken();
+    if (!token) {
+      return {
+        success: false,
+        error: {
+          code: 'CSRF_TOKEN_ERROR',
+          message: 'Не удалось получить CSRF токен. Обновите страницу.',
+        },
+      };
+    }
   }
 
   const headers: HeadersInit = {
@@ -90,6 +99,17 @@ async function apiFetch<T>(
     });
 
     const data = await response.json();
+
+    // Если CSRF токен недействителен, пробуем обновить (SEC-006)
+    if (response.status === 403 && data.error?.code === 'CSRF_TOKEN_INVALID') {
+      csrfToken = null;
+      const newToken = await fetchCsrfToken();
+      if (newToken) {
+        (headers as Record<string, string>)['X-CSRF-Token'] = newToken;
+        const retryResponse = await fetch(url, { ...options, headers });
+        return retryResponse.json();
+      }
+    }
 
     // Если токен истёк, пробуем обновить
     if (response.status === 401 && refreshToken) {

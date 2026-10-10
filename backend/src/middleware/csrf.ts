@@ -6,7 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
 import { config } from '../config.js';
-import logger from './logger.js';
+import logger from '../services/logger.js';
 
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'x-csrf-token';

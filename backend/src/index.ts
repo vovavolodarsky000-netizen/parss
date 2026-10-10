@@ -84,10 +84,15 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// CSRF защита (SEC-003)
-// Применяется ко всем API маршрутам кроме health check
-app.use('/api', csrfProtection);
+// CSRF токен (должен быть ДО csrfProtection)
 app.get('/api/csrf-token', getCsrfToken);
+
+// CSRF защита (SEC-003)
+// Применяется ко всем API маршрутам кроме /csrf-token
+app.use('/api', (req, res, next) => {
+  if (req.path === '/csrf-token') return next();
+  return csrfProtection(req, res, next);
+});
 
 // Логирование запросов
 app.use(logRequest);
@@ -119,10 +124,10 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/channels', channelsRoutes);
 app.use('/api/v1/posts', postsRoutes);
 
-// Legacy routes (редирект на v1 для обратной совместимости)
-app.use('/api/auth', authRoutes);
-app.use('/api/channels', channelsRoutes);
-app.use('/api/posts', postsRoutes);
+// Legacy routes - redirect to v1
+app.use('/api/auth', (req, res) => res.redirect(301, `/api/v1/auth${req.path}`));
+app.use('/api/channels', (req, res) => res.redirect(301, `/api/v1/channels${req.path}`));
+app.use('/api/posts', (req, res) => res.redirect(301, `/api/v1/posts${req.path}`));
 
 // ============================================
 // Обработка ошибок
