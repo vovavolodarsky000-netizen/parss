@@ -1,0 +1,384 @@
+// Схема базы данных для парсера Telegram каналов и веб-сайтов
+// Документация: https://www.prisma.io/docs/concepts/components/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Пользователи и аутентификация
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String
+  role          Role      @default(USER)
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Telegram credentials пользователя
+  telegramApiId   String?
+  telegramApiHash String?
+  telegramSession String? // Зашифрованная сессия
+
+  // Связи
+  channels      Channel[]
+  webSites      WebSite[]
+  posts         Post[]
+  webPosts      WebPost[]
+  publishLogs   PublishLog[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@index([username])
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================
+// Telegram каналы
+// ============================================
+
+model Channel {
+  id           String    @id @default(cuid())
+  userId       String
+  username     String
+  title        String
+  subscribers  Int       @default(0)
+  category     String
+  isActive     Boolean   @default(true)
+  lastParsedAt DateTime?
+  avatar       String?
+  addedAt      DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Связи
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts  Post[]
+  topics ChannelTopic[]
+
+  @@unique([userId, username])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model Topic {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  channels ChannelTopic[]
+  sites    WebSiteTopic[]
+}
+
+model ChannelTopic {
+  channelId String
+  topicId   String
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, topicId])
+}
+
+model ChannelKeyword {
+  id        String  @id @default(cuid())
+  channelId String
+  keyword   String
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@index([channelId])
+  @@index([keyword])
+}
+
+// ============================================
+// Посты из Telegram
+// ============================================
+
+model Post {
+  id            String     @id @default(cuid())
+  userId        String
+  channelId     String
+  telegramMsgId String?    // ID сообщения в Telegram
+  text          String     @db.Text
+  mediaType     MediaType  @default(TEXT)
+  mediaUrl      String?
+  views         Int        @default(0)
+  date          DateTime
+  parsedAt      DateTime   @default(now())
+  status        PostStatus @default(NEW)
+  hasMedia      Boolean    @default(false)
+  source        Source     @default(TELEGRAM)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Связи
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  tags    PostTag[]
+
+  @@index([userId])
+  @@index([channelId])
+  @@index([status])
+  @@index([date])
+}
+
+model PostTag {
+  id     String @id @default(cuid())
+  postId String
+  tag    String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@index([tag])
+}
+
+enum MediaType {
+  TEXT
+  PHOTO
+  VIDEO
+  DOCUMENT
+}
+
+enum PostStatus {
+  NEW
+  APPROVED
+  PUBLISHED
+  REJECTED
+}
+
+enum Source {
+  TELEGRAM
+  WEB
+}
+
+// ============================================
+// Веб-сайты для парсинга
+// ============================================
+
+model WebSite {
+  id           String    @id @default(cuid())
+  userId       String
+  name         String
+  url          String
+  isActive     Boolean   @default(true)
+  lastParsedAt DateTime?
+  addedAt      DateTime  @default(now())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Связи
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  posts     WebPost[]
+  rules     ParseRule[]
+  topics    WebSiteTopic[]
+  keywords  WebSiteKeyword[]
+
+  @@unique([userId, url])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model WebSiteTopic {
+  siteId  String
+  topicId String
+
+  site  WebSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  topic Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([siteId, topicId])
+}
+
+model WebSiteKeyword {
+  id     String  @id @default(cuid())
+  siteId String
+  keyword String
+
+  site WebSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+  @@index([keyword])
+}
+
+// ============================================
+// Правила парсинга
+// ============================================
+
+model ParseRule {
+  id              String  @id @default(cuid())
+  siteId          String
+  name            String
+  urlPattern      String
+  titleSelector   String
+  contentSelector String
+  dateSelector    String?
+  imageSelector   String?
+  authorSelector  String?
+  linkSelector    String?
+  maxItems        Int     @default(10)
+  isActive        Boolean @default(true)
+
+  site WebSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([siteId])
+}
+
+// ============================================
+// Посты с веб-сайтов
+// ============================================
+
+model WebPost {
+  id        String     @id @default(cuid())
+  userId    String
+  siteId    String
+  title     String
+  content   String     @db.Text
+  url       String
+  imageUrl  String?
+  author    String?
+  date      DateTime
+  parsedAt  DateTime   @default(now())
+  status    PostStatus @default(NEW)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  // Связи
+  user User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site WebSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  tags WebPostTag[]
+
+  @@index([userId])
+  @@index([siteId])
+  @@index([status])
+  @@index([date])
+}
+
+model WebPostTag {
+  id       String @id @default(cuid())
+  webPostId String
+  tag      String
+
+  webPost WebPost @relation(fields: [webPostId], references: [id], onDelete: Cascade)
+
+  @@index([webPostId])
+  @@index([tag])
+}
+
+// ============================================
+// Настройки парсера
+// ============================================
+
+model ParserSettings {
+  id                String  @id @default(cuid())
+  userId            String  @unique
+  parseInterval     Int     @default(30) // минуты
+  maxPostsPerChannel Int    @default(50)
+  autoApprove       Boolean @default(false)
+  filterMinViews    Int     @default(0)
+  filterMediaOnly   Boolean @default(false)
+
+  @@index([userId])
+}
+
+// ============================================
+// Логи и аудит
+// ============================================
+
+model PublishLog {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String?
+  action    String
+  target    String?
+  status    String
+  message   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ============================================
+// Очереди задач
+// ============================================
+
+model ParsingJob {
+  id          String     @id @default(cuid())
+  userId      String
+  type        JobType
+  status      JobStatus  @default(PENDING)
+  payload     Json
+  result      Json?
+  error       String?    @db.Text
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+enum JobType {
+  PARSE_TELEGRAM
+  PARSE_WEB
+  PUBLISH
+  SYNC
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
