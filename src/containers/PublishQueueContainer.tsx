@@ -18,21 +18,25 @@ export default function PublishQueue() {
     [posts, webPosts]
   );
 
+  // Оптимизация: используем Set для быстрого поиска
+  const webPostIdsSet = useMemo(() => new Set(webPosts.map(wp => wp.id)), [webPosts]);
+  const postIdsSet = useMemo(() => new Set(posts.map(p => p.id)), [posts]);
+
   const handlePostStatusUpdate = useCallback((id: string, status: 'new' | 'approved' | 'published' | 'rejected') => {
-    const isWebPost = webPosts.some(wp => wp.id === id);
+    const isWebPost = webPostIdsSet.has(id);
     if (isWebPost) {
       handleUpdateWebPostStatus(id, status);
     } else {
       handleUpdatePostStatus(id, status);
     }
-  }, [webPosts, handleUpdateWebPostStatus, handleUpdatePostStatus]);
+  }, [webPostIdsSet, handleUpdateWebPostStatus, handleUpdatePostStatus]);
 
   const handleBulkStatusUpdate = useCallback((ids: string[], status: 'new' | 'approved' | 'published' | 'rejected') => {
-    const webPostIds = ids.filter(id => webPosts.some(wp => wp.id === id));
-    const telegramPostIds = ids.filter(id => posts.some(p => p.id === id));
+    const webPostIds = ids.filter(id => webPostIdsSet.has(id));
+    const telegramPostIds = ids.filter(id => postIdsSet.has(id));
     if (webPostIds.length > 0) handleBulkUpdateWebPosts(webPostIds, status);
     if (telegramPostIds.length > 0) handleBulkUpdate(telegramPostIds, status);
-  }, [webPosts, posts, handleBulkUpdateWebPosts, handleBulkUpdate]);
+  }, [webPostIdsSet, postIdsSet, handleBulkUpdateWebPosts, handleBulkUpdate]);
 
   return (
     <PublishQueueComponent

@@ -400,13 +400,13 @@ function generateTokens(
   const accessToken = jwt.sign(
     { userId, email, username, role },
     config.jwt.secret,
-    { expiresIn: config.jwt.expiresIn as any }
+    { expiresIn: config.jwt.expiresIn }
   );
 
   const refreshToken = jwt.sign(
     { userId },
     config.jwt.refreshSecret,
-    { expiresIn: config.jwt.refreshExpiresIn as any }
+    { expiresIn: config.jwt.refreshExpiresIn }
   );
 
   return { accessToken, refreshToken };

@@ -182,14 +182,21 @@ function generateMockWebPosts(sites: WebSite[]): WebPost[] {
 export function getWebSites(): WebSite[] {
   const stored = localStorage.getItem(SITES_KEY);
   if (stored) {
-    const sites = JSON.parse(stored);
-    // Гарантируем наличие полей topics и keywords для обратной совместимости
-    return sites.map((s: WebSite) => ({
-      ...s,
-      topics: s.topics || [],
-      keywords: s.keywords || [],
-      parseRules: s.parseRules || [],
-    }));
+    try {
+      const sites = JSON.parse(stored);
+      // Гарантируем наличие полей topics и keywords для обратной совместимости
+      return sites.map((s: WebSite) => ({
+        ...s,
+        topics: s.topics || [],
+        keywords: s.keywords || [],
+        parseRules: s.parseRules || [],
+      }));
+    } catch (error) {
+      console.error('Ошибка парсинга сайтов из localStorage:', error);
+      const mock = generateMockSites();
+      localStorage.setItem(SITES_KEY, JSON.stringify(mock));
+      return mock;
+    }
   }
   const mock = generateMockSites();
   localStorage.setItem(SITES_KEY, JSON.stringify(mock));
@@ -215,7 +222,15 @@ export function saveWebSites(sites: WebSite[]): void {
 export function getWebPosts(): WebPost[] {
   const stored = localStorage.getItem(WEB_POSTS_KEY);
   if (stored) {
-    return JSON.parse(stored);
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.error('Ошибка парсинга веб-постов из localStorage:', error);
+      const sites = getWebSites();
+      const mock = generateMockWebPosts(sites);
+      localStorage.setItem(WEB_POSTS_KEY, JSON.stringify(mock));
+      return mock;
+    }
   }
   const sites = getWebSites();
   const mock = generateMockWebPosts(sites);
@@ -365,20 +380,26 @@ export function simulateWebParsing(): WebPost[] {
     },
   ];
 
-  sites.forEach(site => {
-    const numNewPosts = Math.floor(Math.random() * 3) + 1;
+  sites.forEach((site, siteIndex) => {
+    // Детерминированное количество постов на основе индекса сайта
+    const numNewPosts = (siteIndex % 3) + 1;
     for (let i = 0; i < numNewPosts; i++) {
-      const article = sampleArticles[Math.floor(Math.random() * sampleArticles.length)];
+      // Детерминированный выбор статьи
+      const articleIndex = (siteIndex + i) % sampleArticles.length;
+      const article = sampleArticles[articleIndex];
+
+      // Детерминированный ID на основе индексов
+      const postId = `web_post_${Date.now()}_${siteIndex}_${i}`;
 
       newPosts.push({
-        id: `web_post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: postId,
         siteId: site.id,
         siteName: site.name,
         siteUrl: site.url,
         title: article.title,
         content: article.content,
-        url: `${site.url}/article/${Date.now()}_${i}`,
-        imageUrl: `https://picsum.photos/seed/${Date.now()}_${i}/600/400`,
+        url: `${site.url}/article/${siteIndex}_${i}`,
+        imageUrl: `https://picsum.photos/seed/web${siteIndex}_${i}/600/400`,
         author: article.author,
         date: new Date().toISOString(),
         parsedAt: new Date().toISOString(),

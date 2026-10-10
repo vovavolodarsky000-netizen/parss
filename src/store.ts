@@ -121,13 +121,21 @@ function generateMockPosts(channels: Channel[]): Post[] {
 export function getChannels(): Channel[] {
   const stored = localStorage.getItem(CHANNELS_KEY);
   if (stored) {
-    const channels = JSON.parse(stored);
-    // Гарантируем наличие полей topics и keywords для обратной совместимости
-    return channels.map((ch: Channel) => ({
-      ...ch,
-      topics: ch.topics || [],
-      keywords: ch.keywords || [],
-    }));
+    try {
+      const channels = JSON.parse(stored);
+      // Гарантируем наличие полей topics и keywords для обратной совместимости
+      return channels.map((ch: Channel) => ({
+        ...ch,
+        topics: ch.topics || [],
+        keywords: ch.keywords || [],
+      }));
+    } catch (error) {
+      console.error('Ошибка парсинга каналов из localStorage:', error);
+      // Возвращаем моковые данные при ошибке
+      const mock = generateMockChannels();
+      localStorage.setItem(CHANNELS_KEY, JSON.stringify(mock));
+      return mock;
+    }
   }
   const mock = generateMockChannels();
   localStorage.setItem(CHANNELS_KEY, JSON.stringify(mock));
@@ -153,7 +161,15 @@ export function saveChannels(channels: Channel[]): void {
 export function getPosts(): Post[] {
   const stored = localStorage.getItem(POSTS_KEY);
   if (stored) {
-    return JSON.parse(stored);
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.error('Ошибка парсинга постов из localStorage:', error);
+      const channels = getChannels();
+      const mock = generateMockPosts(channels);
+      localStorage.setItem(POSTS_KEY, JSON.stringify(mock));
+      return mock;
+    }
   }
   const channels = getChannels();
   const mock = generateMockPosts(channels);
@@ -180,7 +196,13 @@ export function savePosts(posts: Post[]): void {
 export function getSettings(): ParserSettings {
   const stored = localStorage.getItem(SETTINGS_KEY);
   if (stored) {
-    return { ...defaultSettings, ...JSON.parse(stored) };
+    try {
+      return { ...defaultSettings, ...JSON.parse(stored) };
+    } catch (error) {
+      console.error('Ошибка парсинга настроек из localStorage:', error);
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
+      return defaultSettings;
+    }
   }
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(defaultSettings));
   return defaultSettings;
@@ -299,22 +321,31 @@ export function simulateParsing(): Post[] {
     '📱 SMM стратегия 2026: контент-маркетинг и таргетированная реклама через воронку продаж.',
   ];
 
-  channels.forEach(channel => {
-    const numNewPosts = Math.floor(Math.random() * 3) + 1;
+  channels.forEach((channel, channelIndex) => {
+    // Детерминированное количество постов на основе индекса канала
+    const numNewPosts = (channelIndex % 3) + 1;
     for (let i = 0; i < numNewPosts; i++) {
-      const text = sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+      // Детерминированный выбор текста и типа медиа
+      const textIndex = (channelIndex + i) % sampleTexts.length;
+      const text = sampleTexts[textIndex];
       const mediaTypes: Array<'text' | 'photo' | 'video'> = ['text', 'photo', 'video'];
-      const mediaType = mediaTypes[Math.floor(Math.random() * mediaTypes.length)];
+      const mediaType = mediaTypes[(channelIndex + i) % mediaTypes.length];
+      
+      // Детерминированный ID на основе индексов
+      const postId = `post_${Date.now()}_${channelIndex}_${i}`;
+      
+      // Детерминированное количество просмотров
+      const views = ((channelIndex + i) * 1000) % 30000 + 500;
       
       newPosts.push({
-        id: `post_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: postId,
         channelId: channel.id,
         channelTitle: channel.title,
         channelUsername: channel.username,
         text,
         mediaType,
-        mediaUrl: mediaType !== 'text' ? `https://picsum.photos/seed/${Date.now()}_${i}/400/300` : undefined,
-        views: Math.floor(Math.random() * 30000) + 500,
+        mediaUrl: mediaType !== 'text' ? `https://picsum.photos/seed/${channelIndex}_${i}/400/300` : undefined,
+        views,
         date: new Date().toISOString(),
         parsedAt: new Date().toISOString(),
         status: 'new',

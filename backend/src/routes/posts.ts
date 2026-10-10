@@ -83,10 +83,10 @@ router.get(
           channelUsername: p.channel.username,
         })),
         pagination: {
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
+          page,
+          limit,
           total,
-          totalPages: Math.ceil(total / parseInt(limit as string)),
+          totalPages: Math.ceil(total / limit),
         },
       },
     });
