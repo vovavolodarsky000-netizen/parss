@@ -98,11 +98,26 @@ router.post(
       email: user.email,
     });
 
+    // SEC-002: устанавливаем токены в httpOnly cookies
+    res.cookie('access_token', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней
+    });
+
+    res.cookie('refresh_token', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
+    });
+
     res.status(201).json({
       success: true,
       data: {
         user,
-        tokens,
+        // SEC-002: не возвращаем токены в теле ответа
       },
     });
   })
@@ -209,7 +224,8 @@ router.post(
 router.post(
   '/refresh',
   asyncHandler(async (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
+    // SEC-002: получаем refresh token из cookies
+    const refreshToken = req.cookies?.refresh_token || req.body.refreshToken;
 
     if (!refreshToken) {
       throw new BadRequestError('Refresh token не предоставлен');
@@ -255,9 +271,24 @@ router.post(
       },
     });
 
+    // SEC-002: устанавливаем новые токены в httpOnly cookies
+    res.cookie('access_token', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 дней
+    });
+
+    res.cookie('refresh_token', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 дней
+    });
+
     res.json({
       success: true,
-      data: { tokens },
+      message: 'Токены обновлены',
     });
   })
 );
@@ -270,7 +301,8 @@ router.post(
   '/logout',
   authenticate,
   asyncHandler(async (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
+    // SEC-002: получаем refresh token из cookies
+    const refreshToken = req.cookies?.refresh_token;
 
     if (refreshToken) {
       await prisma.refreshToken.deleteMany({
@@ -291,6 +323,10 @@ router.post(
     });
 
     logger.info('Пользователь вышел из системы', { userId: req.user!.id });
+
+    // SEC-002: очищаем cookies
+    res.clearCookie('access_token');
+    res.clearCookie('refresh_token');
 
     res.json({
       success: true,

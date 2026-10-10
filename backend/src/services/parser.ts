@@ -181,7 +181,10 @@ class WebParserService {
         const articles = await this.parsePage(pageUrl, [rule]);
         allArticles.push(...articles);
       } catch (error) {
-        logger.warn('Ошибка парсинга страницы сайта', { baseUrl, error });
+        logger.warn('Ошибка парсинга страницы сайта', { 
+          baseUrl, 
+          error: error instanceof Error ? error.message : String(error) 
+        });
       }
     }
 

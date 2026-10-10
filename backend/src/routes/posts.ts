@@ -102,7 +102,8 @@ router.put(
   asyncHandler(async (req: Request, res: Response) => {
     const { status } = req.body;
 
-    if (!['NEW', 'APPROVED', 'PUBLISHED', 'REJECTED'].includes(status)) {
+    // Валидация статуса (используем нижний регистр как в types.ts)
+    if (!['new', 'approved', 'published', 'rejected'].includes(status)) {
       throw new BadRequestError('Недопустимый статус');
     }
 
@@ -156,7 +157,8 @@ router.put(
       throw new BadRequestError('Список ID обязателен');
     }
 
-    if (!['NEW', 'APPROVED', 'PUBLISHED', 'REJECTED'].includes(status)) {
+    // Валидация статуса (используем нижний регистр как в types.ts)
+    if (!['new', 'approved', 'published', 'rejected'].includes(status)) {
       throw new BadRequestError('Недопустимый статус');
     }
 
@@ -190,6 +192,10 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.id;
 
+    // Создаём Date объект один раз для оптимизации
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     const [total, byStatus, today] = await Promise.all([
       prisma.post.count({ where: { userId } }),
       prisma.post.groupBy({
@@ -200,7 +206,7 @@ router.get(
       prisma.post.count({
         where: {
           userId,
-          date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+          date: { gte: todayStart },
         },
       }),
     ]);

@@ -169,8 +169,12 @@ router.post(
     try {
       const channelInfo = await telegramService.getChannelInfo(data.username);
       subscribers = channelInfo.subscribers;
+      avatar = channelInfo.avatar;
     } catch (error) {
-      logger.warn('Не удалось получить информацию из Telegram', { username: data.username });
+      logger.warn('Не удалось получить информацию из Telegram', { 
+        username: data.username,
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
 
     // Создаём канал
@@ -186,10 +190,12 @@ router.post(
           ? {
               create: await Promise.all(
                 data.topics.map(async (topicName) => {
-                  let topic = await prisma.topic.findUnique({ where: { name: topicName } });
-                  if (!topic) {
-                    topic = await prisma.topic.create({ data: { name: topicName } });
-                  }
+                  // Используем upsert для избежания race conditions
+                  const topic = await prisma.topic.upsert({
+                    where: { name: topicName },
+                    update: {},
+                    create: { name: topicName },
+                  });
                   return { topicId: topic.id };
                 })
               ),
@@ -268,10 +274,12 @@ router.put(
       await prisma.channelTopic.createMany({
         data: await Promise.all(
           topics.map(async (topicName: string) => {
-            let topic = await prisma.topic.findUnique({ where: { name: topicName } });
-            if (!topic) {
-              topic = await prisma.topic.create({ data: { name: topicName } });
-            }
+            // Используем upsert для избежания race conditions
+            const topic = await prisma.topic.upsert({
+              where: { name: topicName },
+              update: {},
+              create: { name: topicName },
+            });
             return { channelId: channel.id, topicId: topic.id };
           })
         ),
@@ -386,7 +394,7 @@ router.post(
             channelId: channel.id,
             telegramMsgId: msg.id.toString(),
             text: msg.text,
-            mediaType: msg.mediaType.toUpperCase() as any,
+            mediaType: msg.mediaType.toUpperCase() as 'TEXT' | 'PHOTO' | 'VIDEO' | 'DOCUMENT',
             mediaUrl: msg.mediaUrl,
             views: msg.views,
             date: msg.date,
@@ -438,7 +446,7 @@ router.post(
         success: false,
         error: {
           code: 'PARSE_ERROR',
-          message: error.message,
+          message: errorMessage,
         },
       });
     }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Post } from '../types';
 
 interface Props {
@@ -24,9 +24,19 @@ const PublishQueue = React.memo(function PublishQueue({ posts, onUpdateStatus, o
   const [publishTarget, setPublishTarget] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [publishLog, setPublishLog] = useState<Array<{ time: string; message: string; type: 'success' | 'error' | 'info' }>>([]);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>();
 
   const approvedPosts = useMemo(() => posts.filter(p => p.status === 'approved'), [posts]);
   const publishedPosts = useMemo(() => posts.filter(p => p.status === 'published'), [posts]);
+
+  // Очистка interval при размонтировании
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
 
   const toggleSelect = useCallback((id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
@@ -49,7 +59,7 @@ const PublishQueue = React.memo(function PublishQueue({ posts, onUpdateStatus, o
     const postsToPublish = approvedPosts.filter(p => selected.includes(p.id));
     let index = 0;
 
-    const interval = setInterval(() => {
+    intervalRef.current = setInterval(() => {
       if (index < postsToPublish.length) {
         const post = postsToPublish[index];
         setPublishLog(prev => [{
@@ -60,7 +70,9 @@ const PublishQueue = React.memo(function PublishQueue({ posts, onUpdateStatus, o
         onUpdateStatus(post.id, 'published');
         index++;
       } else {
-        clearInterval(interval);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
         setPublishing(false);
         setSelected([]);
         setPublishLog(prev => [{

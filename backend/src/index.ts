@@ -56,7 +56,7 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
   })
 );
 
@@ -164,7 +164,9 @@ const startServer = async () => {
       logger.info(`🌍 Окружение: ${config.env}`);
     });
   } catch (error) {
-    logger.error('❌ Ошибка запуска сервера', { error });
+    logger.error('❌ Ошибка запуска сервера', { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
     process.exit(1);
   }
 };

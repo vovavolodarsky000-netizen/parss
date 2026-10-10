@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server } from 'http';
+import crypto from 'crypto';
 import logger from './logger.js';
 
 interface Client {
@@ -43,7 +44,9 @@ class WebSocketService {
           const message: WebSocketMessage = JSON.parse(data.toString());
           this.handleMessage(clientId, message);
         } catch (error) {
-          logger.error('Ошибка обработки WebSocket сообщения', { error });
+          logger.error('Ошибка обработки WebSocket сообщения', { 
+            error: error instanceof Error ? error.message : String(error) 
+          });
         }
       });
 
@@ -170,7 +173,7 @@ class WebSocketService {
    * Генерация уникального ID клиента
    */
   private generateClientId(): string {
-    return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `client_${Date.now()}_${crypto.randomBytes(8).toString('hex')}`;
   }
 
   /**

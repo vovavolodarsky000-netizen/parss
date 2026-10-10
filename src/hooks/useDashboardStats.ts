@@ -31,6 +31,36 @@ export function useDashboardStats(
   const stats = useMemo<DashboardStats>(() => {
     const allPosts = [...posts, ...webPosts];
 
+    // Вычисляем lastParseTime отдельно для оптимизации
+    const channelLast = channels.reduce((latest, ch) => {
+      if (ch.lastParsed && (!latest || new Date(ch.lastParsed) > new Date(latest))) {
+        return ch.lastParsed;
+      }
+      return latest;
+    }, null as string | null);
+
+    const siteLast = sites.reduce((latest, s) => {
+      if (s.lastParsed && (!latest || new Date(s.lastParsed) > new Date(latest))) {
+        return s.lastParsed;
+      }
+      return latest;
+    }, null as string | null);
+
+    let lastParseTime: string | null = null;
+    if (channelLast && siteLast) {
+      lastParseTime = new Date(channelLast) > new Date(siteLast) ? channelLast : siteLast;
+    } else {
+      lastParseTime = channelLast || siteLast;
+    }
+
+    // Оптимизируем postsToday - создаём Date один раз
+    const today = new Date();
+    const todayString = today.toDateString();
+    const postsToday = allPosts.filter((p) => {
+      const postDate = new Date(p.date);
+      return postDate.toDateString() === todayString;
+    }).length;
+
     return {
       totalChannels: channels.length + sites.length,
       activeChannels:
@@ -40,31 +70,8 @@ export function useDashboardStats(
       newPosts: allPosts.filter((p) => p.status === 'new').length,
       approvedPosts: allPosts.filter((p) => p.status === 'approved').length,
       publishedPosts: allPosts.filter((p) => p.status === 'published').length,
-      lastParseTime: (() => {
-        const channelLast = channels.reduce((latest, ch) => {
-          if (ch.lastParsed && (!latest || new Date(ch.lastParsed) > new Date(latest))) {
-            return ch.lastParsed;
-          }
-          return latest;
-        }, null as string | null);
-
-        const siteLast = sites.reduce((latest, s) => {
-          if (s.lastParsed && (!latest || new Date(s.lastParsed) > new Date(latest))) {
-            return s.lastParsed;
-          }
-          return latest;
-        }, null as string | null);
-
-        if (channelLast && siteLast) {
-          return new Date(channelLast) > new Date(siteLast) ? channelLast : siteLast;
-        }
-        return channelLast || siteLast;
-      })(),
-      postsToday: allPosts.filter((p) => {
-        const today = new Date();
-        const postDate = new Date(p.date);
-        return postDate.toDateString() === today.toDateString();
-      }).length,
+      lastParseTime,
+      postsToday,
     };
   }, [channels, posts, sites, webPosts]);
 

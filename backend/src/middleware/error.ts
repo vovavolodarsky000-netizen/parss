@@ -72,7 +72,7 @@ export const errorHandler = (
 
   // Обработка ошибок Prisma
   if (err.name === 'PrismaClientKnownRequestError') {
-    const prismaError = err as any;
+    const prismaError = err as Error & { code?: string };
     switch (prismaError.code) {
       case 'P2002':
         statusCode = 409;
@@ -141,7 +141,7 @@ export const notFoundHandler = (
  * Middleware для обработки необработанных исключений
  */
 export const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<void | Response>
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
