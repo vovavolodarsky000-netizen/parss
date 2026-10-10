@@ -123,7 +123,10 @@ class RedisService {
       }
       return true;
     } catch (error) {
-      logger.error('Redis: ошибка очистки по паттерну', { pattern, error });
+      logger.error('Redis: ошибка очистки по паттерну', { 
+        pattern, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
       return false;
     }
   }

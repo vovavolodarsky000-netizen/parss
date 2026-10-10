@@ -92,12 +92,12 @@ const SitesManager = React.memo(function SitesManager({ sites, onAdd, onRemove, 
     }));
   }, []);
 
-  const openRulesModal = (site: WebSite) => {
+  const openRulesModal = useCallback((site: WebSite) => {
     setEditingSite(site);
     setShowRulesModal(true);
-  };
+  }, []);
 
-  const addRule = () => {
+  const addRule = useCallback(() => {
     if (!editingSite) return;
     const newRule: ParseRule = {
       id: `rule_${Date.now()}`,
@@ -109,23 +109,23 @@ const SitesManager = React.memo(function SitesManager({ sites, onAdd, onRemove, 
       isActive: true,
     };
     onUpdate(editingSite.id, { parseRules: [...editingSite.parseRules, newRule] });
-  };
+  }, [editingSite, onUpdate]);
 
-  const updateRule = (ruleId: string, updates: Partial<ParseRule>) => {
+  const updateRule = useCallback((ruleId: string, updates: Partial<ParseRule>) => {
     if (!editingSite) return;
     const updatedRules = editingSite.parseRules.map(r =>
       r.id === ruleId ? { ...r, ...updates } : r
     );
     onUpdate(editingSite.id, { parseRules: updatedRules });
     setEditingSite({ ...editingSite, parseRules: updatedRules });
-  };
+  }, [editingSite, onUpdate]);
 
-  const removeRule = (ruleId: string) => {
+  const removeRule = useCallback((ruleId: string) => {
     if (!editingSite) return;
     const updatedRules = editingSite.parseRules.filter(r => r.id !== ruleId);
     onUpdate(editingSite.id, { parseRules: updatedRules });
     setEditingSite({ ...editingSite, parseRules: updatedRules });
-  };
+  }, [editingSite, onUpdate]);
 
   return (
     <div className="space-y-6">
